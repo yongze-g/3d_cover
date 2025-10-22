@@ -141,9 +141,9 @@ if cover_image and spine_image:
     st.subheader("上传的图片预览")
     img_col1, img_col2 = st.columns(2)
     with img_col1:
-        st.image(spine_img, caption="书脊图片", use_container_width=False)
+        st.image(spine_img, caption="书脊图片", width='content')
     with img_col2:
-        st.image(cover_img, caption="封面图片", use_container_width=False) 
+        st.image(cover_img, caption="封面图片", width='content') 
     
     # 生成3D封面
     with st.spinner("正在渲染3D封面..."):
@@ -155,7 +155,7 @@ if cover_image and spine_image:
             
             # 显示结果
             with result_placeholder:
-                st.image(result_image, caption="3D封面渲染结果", use_container_width=False)
+                st.image(result_image, caption="3D封面渲染结果", width='content')
         
             # 准备下载
             buf = io.BytesIO()
