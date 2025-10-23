@@ -20,7 +20,8 @@ class BookCoverRenderer:
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
     
     def generate_3d_cover(self, cover_img, spine_img, perspective_angle, 
-                          book_distance, cover_width, bg_color_bgr, bg_alpha=255):
+                          book_distance, cover_width, bg_color_bgr, bg_alpha=255, 
+                          spine_spread_angle=0):
         """
         生成3D封面效果
         
@@ -32,6 +33,7 @@ class BookCoverRenderer:
             cover_width: 开本宽度（mm）
             bg_color_bgr: 背景颜色（BGR格式）
             bg_alpha: 背景透明度（0-255）
+            spine_spread_angle: 书脊额外展开角度（度）
             
         返回:
             渲染后的图像（RGB或RGBA格式的numpy数组）
@@ -46,6 +48,7 @@ class BookCoverRenderer:
         
         # 角度转换为弧度
         angle_rad = np.radians(perspective_angle)
+        spine_angle_rad = np.radians(perspective_angle + spine_spread_angle)
 
         # 计算封面变换参数
         cover_height = self.display_ppi * cover_width / original_cover_w * original_cover_h
@@ -63,11 +66,11 @@ class BookCoverRenderer:
         spine_height = cover_height
         spine_width = spine_height / original_spine_h * original_spine_w
         
-        display_spine_width = spine_width * np.sin(angle_rad)
-        spine_offset_y_bottom = camera_height * spine_width * np.cos(angle_rad) / (
-            book_distance + spine_width * np.cos(angle_rad))
-        spine_offset_y_top = camera_height_complement * spine_width * np.cos(angle_rad) / (
-            book_distance + spine_width * np.cos(angle_rad))
+        display_spine_width = spine_width * np.sin(spine_angle_rad)
+        spine_offset_y_bottom = camera_height * spine_width * np.cos(spine_angle_rad) / (
+            book_distance + spine_width * np.cos(spine_angle_rad))
+        spine_offset_y_top = camera_height_complement * spine_width * np.cos(spine_angle_rad) / (
+            book_distance + spine_width * np.cos(spine_angle_rad))
 
         # 创建封面透视变换
         cover_points = np.float32([[0, 0], [original_cover_w, 0], 
@@ -195,6 +198,10 @@ class BookCoverRenderer:
 
 def setup_ui():
     """设置Streamlit用户界面"""
+    # 初始化session_state以保存spine_spread_angle值
+    if 'spine_spread_angle' not in st.session_state:
+        st.session_state.spine_spread_angle = 0
+        
     # 设置页面配置
     st.set_page_config(
         page_title="3D图书封面渲染器",
@@ -213,12 +220,32 @@ def setup_ui():
         # 图书尺寸参数
         book_distance = st.slider("相机与书距离（mm）", 300, 500, 500)
         cover_width = st.slider("开本宽度（mm）", 120, 200, 187)
-        perspective_angle = st.slider("旋转角度（°）", 1, 89, 30)
+        perspective_angle = st.slider("旋转角度（°）", 1, 89, 40)
+        
+        # 计算最大允许的书脊额外展开角度
+        max_spine_spread_angle = 90 - perspective_angle
+        
+        # 如果当前保存的值超过新的上限，则截断
+        if st.session_state.spine_spread_angle > max_spine_spread_angle:
+            st.session_state.spine_spread_angle = max_spine_spread_angle
+        
+        # 使用session_state中保存的值作为默认值
+        spine_spread_angle = st.slider(
+            "书脊额外展开角度（°）", 
+            0, 
+            max_spine_spread_angle, 
+            st.session_state.spine_spread_angle, 
+            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算"
+        )
+        
+        # 更新session_state中的值
+        st.session_state.spine_spread_angle = spine_spread_angle
+       
         
         # 渲染参数
         bg_color = st.color_picker("背景颜色", "#ffffff")
         bg_alpha = st.slider("背景不透明度", 0, 100, 100, help="0表示完全透明，100表示完全不透明")
-        
+         
         st.markdown("---")
         st.write("📝 使用说明：")
         st.write("1. 上传封面和书脊图片")
@@ -240,11 +267,11 @@ def setup_ui():
         download_placeholder = st.empty()
     
     return cover_image, spine_image, result_placeholder, download_placeholder, \
-           book_distance, cover_width, perspective_angle, bg_color, bg_alpha
+           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle
 
 
 def process_images(cover_image, spine_image, result_placeholder, download_placeholder,
-                   book_distance, cover_width, perspective_angle, bg_color, bg_alpha):
+                   book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle=0):
     """处理上传的图片并生成3D封面"""
     if not (cover_image and spine_image):
         return
@@ -280,7 +307,8 @@ def process_images(cover_image, spine_image, result_placeholder, download_placeh
             result_image = renderer.generate_3d_cover(
                 cover_img, spine_img,
                 perspective_angle, book_distance, cover_width,
-                bg_color_bgr=bgr_bg, bg_alpha=alpha_value
+                bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
+                spine_spread_angle=spine_spread_angle
             )
 
             # 后处理
