@@ -24,13 +24,13 @@ def setup_ui():
     
     # 设置页面配置
     st.set_page_config(
-        page_title="3D图书封面渲染器",
+        page_title="立体封渲染器",
         page_icon="📚",
         layout="wide"
     )
 
     # 页面标题和说明
-    st.title("📚 3D图书封面渲染器")
+    st.title("📚 立体封渲染器")
     st.write("上传图书封面和书脊图片，调整参数生成专业的立体图书效果")
 
     # 侧边栏 - 参数调整
@@ -40,11 +40,16 @@ def setup_ui():
         # 使用expander实现折叠设置
         with st.expander("高级设置", expanded=False):
             # 图书尺寸参数
-            book_distance = st.slider("相机与书距离（mm）", 300, 500, 500)
+            book_distance = st.slider("相机与书距离（mm）", 300, 1000, 800)
             cover_width = st.slider("开本宽度（mm）", 120, 200, 187)
             camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
+            
+            # 输出图像参数
+            st.subheader("输出图像设置")
+            final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
+            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.1, step=0.01)
         
-        perspective_angle = st.slider("旋转角度（°）", 1, 89, 40)
+        perspective_angle = st.slider("旋转角度（°）", 1, 89, 35)
         
         # 计算最大允许的书脊额外展开角度
         max_spine_spread_angle = 90 - perspective_angle
@@ -69,7 +74,7 @@ def setup_ui():
         
         # 渲染参数
         bg_color = st.color_picker("背景颜色", "#ffffff")
-        bg_alpha = st.slider("背景不透明度", 0, 100, 100, help="0表示完全透明，100表示完全不透明")
+        bg_alpha = st.slider("背景不透明度", 0, 100, 100)
          
         st.markdown("---")
         st.write("📝 使用说明：")
@@ -92,5 +97,6 @@ def setup_ui():
         download_placeholder = st.empty()
     
     # 返回st.session_state中的值，确保使用最新的状态值
+    # 返回所有参数，包括新添加的final_size和border_percentage
     return cover_image, spine_image, result_placeholder, download_placeholder, \
-           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, camera_height_ratio
+           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, camera_height_ratio, final_size, border_percentage
