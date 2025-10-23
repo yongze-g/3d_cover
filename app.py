@@ -217,7 +217,7 @@ def setup_ui():
         
         # 渲染参数
         bg_color = st.color_picker("背景颜色", "#ffffff")
-        bg_alpha = st.slider("背景透明度", 0, 100, 100, help="0表示完全透明，100表示完全不透明")
+        bg_alpha = st.slider("背景不透明度", 0, 100, 100, help="0表示完全透明，100表示完全不透明")
         
         st.markdown("---")
         st.write("📝 使用说明：")
