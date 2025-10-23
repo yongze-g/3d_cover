@@ -109,3 +109,30 @@
 - 优化图像居中算法，支持不同尺寸的输入图片正确居中显示
 - 修复alpha通道检测逻辑，解决数组维度不匹配错误
 - 更新项目文档，反映模块化结构和最新功能
+
+## 输出参数自定义功能增强
+
+### 图像处理参数扩展
+- 在processor.py中的process_images函数添加final_size和border_percentage参数
+- 为参数设置默认值（final_size=1200, border_percentage=0.08）
+- 更新函数文档字符串，详细说明新参数的作用和默认值
+- 修改post_process_image函数调用，使用传入的参数而非固定值
+
+### 用户界面增强
+- 在ui.py的setup_ui函数中添加输出图像设置相关控件
+- 创建"输出图像设置"子标题区域，包含两个新的滑动条控件
+- 实现final_size滑动条（范围800-2000像素，默认1200）
+- 实现border_percentage滑动条（范围0.0-0.2，默认0.08，步长0.01）
+- 为新控件添加帮助文本，说明参数的作用
+
+### 参数传递机制优化
+- 更新ui.py中setup_ui函数的返回值，添加final_size和border_percentage参数
+- 确保app.py通过*ui_elements语法正确接收和传递新增参数
+- 更新README.md文档，在参数说明部分添加新参数的详细说明
+- 完善AI_Conversation_History_Summary.txt，记录参数扩展的实现过程
+
+### 功能说明
+- final_size参数控制最终生成图像的尺寸，影响图像质量和文件大小
+- border_percentage参数控制生成图像中边框的比例，在图像周围添加空白区域
+- 用户可以通过UI界面直接调整这些参数，无需修改代码
+- 所有参数均有合理的默认值，确保在不调整的情况下也能生成高质量结果
