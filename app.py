@@ -26,6 +26,7 @@ with st.sidebar:
     
     # 渲染参数
     bg_color = st.color_picker("背景颜色", "#ffffff")
+    bg_alpha = st.slider("背景透明度", 0, 100, 100, help="0表示完全透明，100表示完全不透明")
     # shadow_intensity = st.slider("阴影强度", 0.0, 1.0, 0.3)
     
     st.markdown("---")
@@ -48,13 +49,14 @@ with col2:
     result_placeholder = st.empty()
     download_placeholder = st.empty()
 
-# 转换颜色十六进制值为BGR格式
-def hex_to_rgb(hex_color):
+# 转换颜色十六进制值为RGB格式
+def hex_to_rgba(hex_color, alpha=255):
     hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))  # RGB格式
+    rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))  # RGB格式
+    return rgb + (alpha,)  # RGBA格式
 
 # 生成3D封面效果
-def generate_3d_cover(cover_img, spine_img, perspective_angle, book_distance, cover_width):
+def generate_3d_cover(cover_img, spine_img, perspective_angle, book_distance, cover_width, bg_alpha=255):
     # 转换PIL图像为OpenCV格式，需要将RGB转换为BGR
     cover = cv2.cvtColor(np.array(cover_img), cv2.COLOR_RGB2BGR)
     spine = cv2.cvtColor(np.array(spine_img), cv2.COLOR_RGB2BGR)
@@ -114,7 +116,7 @@ def generate_3d_cover(cover_img, spine_img, perspective_angle, book_distance, co
     final_width =  int(display_cover_width) + int(display_spine_width)
     final_height = max(int(cover_height), int(spine_height))
     
-    # 创建带背景色的画布
+    # 创建带背景色的画布（使用3通道BGR格式）
     final_image = np.full((final_height, final_width, 3), bgr_bg, dtype=np.uint8)
     
     # 放置封面
@@ -133,22 +135,47 @@ def generate_3d_cover(cover_img, spine_img, perspective_angle, book_distance, co
     #         shadow_region * shadow_filter, 0, 255).astype(np.uint8)
     
     # 将BGR格式转换回RGB格式，以便Streamlit和PIL正确显示和保存
-    return cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
+    rgb_image = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
+    
+    # 如果bg_alpha参数小于255，添加Alpha通道，但只让背景透明，封面和书脊保持完全不透明
+    if bg_alpha < 255:
+        # 创建一个遮罩层，初始化为背景透明度
+        alpha_channel = np.full((final_height, final_width), bg_alpha, dtype=np.uint8)
+        
+        # 将封面区域设置为完全不透明（255）
+        cover_area = cover_warped != bgr_bg  # 创建封面区域的掩码
+        cover_area_combined = np.any(cover_area, axis=2)  # 合并三个通道的掩码
+        alpha_channel[:int(cover_height), int(display_spine_width):][cover_area_combined] = 255
+        
+        # 将书脊区域设置为完全不透明（255）
+        spine_area = spine_warped != bgr_bg  # 创建书脊区域的掩码
+        spine_area_combined = np.any(spine_area, axis=2)  # 合并三个通道的掩码
+        alpha_channel[:int(spine_height), :int(display_spine_width)][spine_area_combined] = 255
+        
+        # 合并RGB和Alpha通道
+        rgba_image = cv2.merge([rgb_image, alpha_channel])
+        return rgba_image
+    
+    return rgb_image
 
 # 对生成的3D封面进行后处理：重置尺寸并添加外框
-def post_process_3d_cover(img_array, target_width=1200, border_width=50, bg_color=(255, 255, 255)):
+def post_process_3d_cover(img_array, target_width=1200, border_width=50, bg_color=(255, 255, 255), bg_alpha=255):
     """
     对生成的3D封面进行后处理：重置尺寸并添加与背景色相同的外框
-    :param img_array: 输入的3D封面图像（numpy数组），RGB格式
+    :param img_array: 输入的3D封面图像（numpy数组），RGB或RGBA格式
     :param target_width: 目标宽度（像素），高度按比例缩放
     :param border_width: 外框宽度（像素）
     :param bg_color: 背景颜色和边框颜色，BGR格式（需要转换为RGB）
-    :return: 处理后的图像（numpy数组），RGB格式
+    :param bg_alpha: 背景透明度（0-255）
+    :return: 处理后的图像（numpy数组），RGB或RGBA格式
     """
     # 将BGR格式的背景色转换为RGB格式，与输入图像保持一致
     rgb_bg = (bg_color[2], bg_color[1], bg_color[0])
     
     h, w = img_array.shape[:2]
+    # 检查是否有Alpha通道
+    has_alpha = len(img_array.shape) == 3 and img_array.shape[2] == 4
+    
     # 按比例缩放至目标宽度
     scale = target_width / w
     new_w = int(w * scale)
@@ -156,28 +183,45 @@ def post_process_3d_cover(img_array, target_width=1200, border_width=50, bg_colo
     # 计算正方形尺寸（取宽高中的较大值）
     square_size = max(new_w, new_h)
     
-    # 将图片按比例缩放
-    resized = cv2.resize(img_array, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    
-    # 创建与背景色相同的正方形画布（使用RGB格式）
-    square_canvas = np.full((square_size, square_size, 3), rgb_bg, dtype=np.uint8)
-    
     # 计算居中偏移量
     y_offset = (square_size - new_h) // 2
     x_offset = (square_size - new_w) // 2
     
-    # 将缩放后的图像居中粘贴到正方形画布上
-    square_canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
+    # 将图片按比例缩放
+    resized = cv2.resize(img_array, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    
+    if has_alpha:
+        # 创建带Alpha通道的正方形画布（RGBA格式）
+        square_canvas = np.full((square_size, square_size, 4), (*rgb_bg, bg_alpha), dtype=np.uint8)
+        
+        # 将缩放后的图像居中粘贴到正方形画布上
+        square_canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
+    else:
+        # 创建RGB格式的正方形画布
+        square_canvas = np.full((square_size, square_size, 3), rgb_bg, dtype=np.uint8)
+        
+        # 将缩放后的图像居中粘贴到正方形画布上
+        square_canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
     
     resized = square_canvas
 
-    # 添加与背景色相同的外框（使用RGB格式）
-    final_img = cv2.copyMakeBorder(
-        resized,
-        border_width, border_width, border_width, border_width,
-        cv2.BORDER_CONSTANT,
-        value=rgb_bg
-    )
+    # 添加外框
+    if has_alpha:
+        # RGBA格式添加外框
+        final_img = cv2.copyMakeBorder(
+            resized,
+            border_width, border_width, border_width, border_width,
+            cv2.BORDER_CONSTANT,
+            value=(*rgb_bg, bg_alpha)
+        )
+    else:
+        # RGB格式添加外框
+        final_img = cv2.copyMakeBorder(
+            resized,
+            border_width, border_width, border_width, border_width,
+            cv2.BORDER_CONSTANT,
+            value=rgb_bg
+        )
     return final_img
 
 
@@ -198,18 +242,23 @@ if cover_image and spine_image:
     # 生成3D封面
     with st.spinner("正在渲染3D封面..."):
         try:
+            # 计算背景色和透明度
+            # 将透明度百分比转换为0-255范围
+            alpha_value = int(bg_alpha * 255 / 100)
+            
             # 计算背景色（RGB格式）
-            rgb_bg = hex_to_rgb(bg_color)
+            rgb_bg = hex_to_rgba(bg_color, alpha_value)
             # 转换为BGR格式供OpenCV使用
             bgr_bg = rgb_bg[2], rgb_bg[1], rgb_bg[0]
             
             result_image = generate_3d_cover(
                 cover_img, spine_img, 
-                perspective_angle, book_distance, cover_width
+                perspective_angle, book_distance, cover_width, 
+                bg_alpha=alpha_value
             )
 
             # 后处理：重置尺寸并添加与背景色相同的外框
-            result_image = post_process_3d_cover(result_image, bg_color=bgr_bg)
+            result_image = post_process_3d_cover(result_image, bg_color=bgr_bg, bg_alpha=alpha_value)
             
             # 显示结果
             with result_placeholder:
