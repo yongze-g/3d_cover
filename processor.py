@@ -5,7 +5,8 @@ from renderer import BookCoverRenderer
 
 
 def process_images(cover_image, spine_image, result_placeholder, download_placeholder,
-                   book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle=0, camera_height_ratio=0.5):
+                   book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle=0, camera_height_ratio=0.5, 
+                   final_size=1200, border_percentage=0.08):
     """
     处理上传的图片并生成3D封面
     
@@ -18,9 +19,11 @@ def process_images(cover_image, spine_image, result_placeholder, download_placeh
         cover_width: 开本宽度（mm）
         perspective_angle: 旋转角度（度）
         bg_color: 背景颜色（十六进制）
-        bg_alpha: 背景不透明度（0-100）
-        spine_spread_angle: 书脊额外展开角度（度）
-        camera_height_ratio: 相机相对高度比例（0-1）
+        bg_alpha: 背景透明度
+        spine_spread_angle: 书脊额外展开角度
+        camera_height_ratio: 相机高度比例
+        final_size: 最终图像尺寸
+        border_percentage: 边框占最终图像的比例
     """
     if not (cover_image and spine_image):
         return
@@ -64,6 +67,8 @@ def process_images(cover_image, spine_image, result_placeholder, download_placeh
             # 后处理
             result_image = renderer.post_process_image(
                 result_image,
+                final_size=final_size,  # 使用传入的参数
+                border_percentage=border_percentage,  # 使用传入的参数
                 bg_color_rgb=rgb_bg,
                 bg_alpha=alpha_value
             )
@@ -80,7 +85,7 @@ def process_images(cover_image, spine_image, result_placeholder, download_placeh
             
             with download_placeholder:
                 st.download_button(
-                    label="下载3D封面图片",
+                    label="下载立体封",
                     data=byte_im,
                     file_name="3d_book_cover.png",
                     mime="image/png"
