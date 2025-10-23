@@ -53,17 +53,18 @@ def setup_ui():
         if st.session_state.spine_spread_angle > max_spine_spread_angle:
             st.session_state.spine_spread_angle = max_spine_spread_angle
         
-        # 使用session_state中保存的值作为默认值
+        # 使用key参数绑定组件与session_state，同时保留默认值逻辑
+        # 这样既可以在perspective_angle改变时保留值，又能解决滑块弹回问题
         spine_spread_angle = st.slider(
             "书脊额外展开角度（°）", 
             0, 
             max_spine_spread_angle, 
             st.session_state.spine_spread_angle, 
-            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算"
+            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算",
+            key="spine_spread_angle"  # 添加key参数实现自动绑定
         )
         
-        # 更新session_state中的值
-        st.session_state.spine_spread_angle = spine_spread_angle
+        # 不需要手动更新，因为key参数已经实现了自动绑定
         
         
         # 渲染参数
@@ -90,5 +91,6 @@ def setup_ui():
         result_placeholder = st.empty()
         download_placeholder = st.empty()
     
+    # 返回st.session_state中的值，确保使用最新的状态值
     return cover_image, spine_image, result_placeholder, download_placeholder, \
-           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle, camera_height_ratio
+           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, camera_height_ratio
