@@ -1,0 +1,94 @@
+import streamlit as st
+
+
+def setup_ui():
+    """
+    设置Streamlit用户界面
+    
+    返回:
+        cover_image: 上传的封面图片
+        spine_image: 上传的书脊图片
+        result_placeholder: 渲染结果占位符
+        download_placeholder: 下载按钮占位符
+        book_distance: 相机与书距离（mm）
+        cover_width: 开本宽度（mm）
+        perspective_angle: 旋转角度（度）
+        bg_color: 背景颜色（十六进制）
+        bg_alpha: 背景不透明度（0-100）
+        spine_spread_angle: 书脊额外展开角度（度）
+        camera_height_ratio: 相机相对高度比例（0-1）
+    """
+    # 初始化session_state以保存spine_spread_angle值
+    if 'spine_spread_angle' not in st.session_state:
+        st.session_state.spine_spread_angle = 0
+    
+    # 设置页面配置
+    st.set_page_config(
+        page_title="3D图书封面渲染器",
+        page_icon="📚",
+        layout="wide"
+    )
+
+    # 页面标题和说明
+    st.title("📚 3D图书封面渲染器")
+    st.write("上传图书封面和书脊图片，调整参数生成专业的立体图书效果")
+
+    # 侧边栏 - 参数调整
+    with st.sidebar:
+        st.header("参数设置")
+        
+        # 使用expander实现折叠设置
+        with st.expander("高级设置", expanded=False):
+            # 图书尺寸参数
+            book_distance = st.slider("相机与书距离（mm）", 300, 500, 500)
+            cover_width = st.slider("开本宽度（mm）", 120, 200, 187)
+            camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
+        
+        perspective_angle = st.slider("旋转角度（°）", 1, 89, 40)
+        
+        # 计算最大允许的书脊额外展开角度
+        max_spine_spread_angle = 90 - perspective_angle
+        
+        # 如果当前保存的值超过新的上限，则截断
+        if st.session_state.spine_spread_angle > max_spine_spread_angle:
+            st.session_state.spine_spread_angle = max_spine_spread_angle
+        
+        # 使用session_state中保存的值作为默认值
+        spine_spread_angle = st.slider(
+            "书脊额外展开角度（°）", 
+            0, 
+            max_spine_spread_angle, 
+            st.session_state.spine_spread_angle, 
+            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算"
+        )
+        
+        # 更新session_state中的值
+        st.session_state.spine_spread_angle = spine_spread_angle
+        
+        
+        # 渲染参数
+        bg_color = st.color_picker("背景颜色", "#ffffff")
+        bg_alpha = st.slider("背景不透明度", 0, 100, 100, help="0表示完全透明，100表示完全不透明")
+         
+        st.markdown("---")
+        st.write("📝 使用说明：")
+        st.write("1. 上传封面和书脊图片")
+        st.write("2. 调整左侧参数")
+        st.write("3. 查看预览效果")
+        st.write("4. 下载渲染结果")
+
+    # 主内容区域 - 文件上传和渲染
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.header("上传图片")
+        cover_image = st.file_uploader("上传封面图片", type=["png", "jpg", "jpeg"])
+        spine_image = st.file_uploader("上传书脊图片", type=["png", "jpg", "jpeg"])
+
+    with col2:
+        st.header("渲染结果")
+        result_placeholder = st.empty()
+        download_placeholder = st.empty()
+    
+    return cover_image, spine_image, result_placeholder, download_placeholder, \
+           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle, camera_height_ratio

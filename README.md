@@ -88,7 +88,10 @@ pip install -r requirements.txt
 
 ```
 3d_cover/
-├── app.py            # 主应用程序文件（采用面向对象设计）
+├── app.py            # 主应用程序入口文件
+├── renderer.py       # 渲染器模块，处理3D封面生成核心逻辑
+├── ui.py             # 用户界面模块，处理交互界面
+├── processor.py      # 处理器模块，处理图片和结果展示
 ├── requirements.txt  # 项目依赖
 └── README.md         # 项目说明文档
 ```
