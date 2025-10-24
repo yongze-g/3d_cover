@@ -5,8 +5,11 @@ from renderer import BookCoverRenderer
 
 
 def process_images(cover_image, spine_image, result_placeholder, download_placeholder,
-                   book_distance, cover_width, perspective_angle, bg_color, bg_alpha, spine_spread_angle=0, camera_height_ratio=0.5, 
-                   final_size=1200, border_percentage=0.08):
+                   book_distance, cover_width, perspective_angle, 
+                   bg_color, bg_alpha, 
+                   spine_spread_angle=0, camera_height_ratio=0.5, 
+                   final_size=1200, border_percentage=0.08, 
+                   book_type="平装", hardcover_spine_angle=180):
     """
     处理上传的图片并生成3D封面
     
@@ -24,6 +27,8 @@ def process_images(cover_image, spine_image, result_placeholder, download_placeh
         camera_height_ratio: 相机高度比例
         final_size: 最终图像尺寸
         border_percentage: 边框占最终图像的比例
+        book_type: 书型（平装/精装）
+        hardcover_spine_angle: 精装书脊圆心角（度）
     """
     if not (cover_image and spine_image):
         return
@@ -61,7 +66,9 @@ def process_images(cover_image, spine_image, result_placeholder, download_placeh
                 perspective_angle, book_distance, cover_width,
                 bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
                 spine_spread_angle=spine_spread_angle,
-                camera_height_ratio=camera_height_ratio
+                camera_height_ratio=camera_height_ratio,
+                book_type=book_type,
+                hardcover_spine_angle=hardcover_spine_angle
             )
 
             # 后处理
