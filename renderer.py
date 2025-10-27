@@ -22,9 +22,163 @@ class BookCoverRenderer:
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
     
+    def transform_spine(self, spine_img, perspective_angle, spine_spread_angle, 
+                       book_distance, cover_height, camera_height, 
+                       camera_height_complement, bg_color_bgr):
+        """
+        处理（平装）书脊图像的变换
+        
+        参数:
+            spine_img: BGR格式的书脊图像
+            perspective_angle: 旋转角度（度）
+            spine_spread_angle: 书脊额外展开角度（度）
+            book_distance: 相机与书距离（mm）
+            cover_height: 封面高度（像素）
+            camera_height: 相机高度（像素）
+            camera_height_complement: 封面高度减去相机高度（像素）
+            bg_color_bgr: 背景颜色（BGR格式）
+            
+        返回:
+            spine_warped: 变换后的书脊图像
+            display_spine_width: 变换后的书脊宽度（像素）
+            spine_height: 变换后的书脊高度（像素）
+        """
+        # 获取书脊图像尺寸
+        original_spine_h, original_spine_w = spine_img.shape[:2] # mm
+        
+        # 角度转换为弧度
+        spine_angle_rad = np.radians(perspective_angle + spine_spread_angle)
+        
+        # 计算书脊变换参数
+        spine_height = cover_height
+        spine_width = spine_height / self.display_ppmm / original_spine_h * original_spine_w # in mm
+        
+        display_spine_width = spine_width * self.display_ppmm * np.sin(spine_angle_rad) # in pixel
+        spine_offset_y_bottom = camera_height * spine_width * np.cos(spine_angle_rad) / (
+            book_distance + spine_width * np.cos(spine_angle_rad)) 
+        spine_offset_y_top = camera_height_complement * spine_width * np.cos(spine_angle_rad) / (
+            book_distance + spine_width * np.cos(spine_angle_rad)) 
+        
+        # 创建书脊透视变换
+        spine_points = np.float32([[0, 0], [original_spine_w, 0], 
+                        [original_spine_w, original_spine_h], [0, original_spine_h]])
+        spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
+                        [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
+        spine_matrix = cv2.getPerspectiveTransform(spine_points, spine_transformed)
+        spine_warped = cv2.warpPerspective(
+            spine_img, spine_matrix, (int(display_spine_width), int(spine_height)),
+            borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
+        )
+        
+        return spine_warped, display_spine_width, spine_height
+    
+    def transform_spine_hardcover(self, spine_img, perspective_angle, spine_spread_angle, 
+                                 book_distance, cover_height, camera_height, 
+                                 camera_height_complement, bg_color_bgr, hardcover_spine_angle):
+        """
+        处理（精装）书脊图像的变换，考虑书脊的圆弧形
+        
+        参数:
+            spine_img: BGR格式的书脊图像
+            perspective_angle: 旋转角度（度）
+            spine_spread_angle: 书脊额外展开角度（度）
+            book_distance: 相机与书距离（mm）
+            cover_height: 封面高度（像素）
+            camera_height: 相机高度（像素）
+            camera_height_complement: 封面高度减去相机高度（像素）
+            bg_color_bgr: 背景颜色（BGR格式）
+            hardcover_spine_angle: 精装书脊圆心角（度）
+            
+        返回:
+            spine_warped: 变换后的书脊图像
+            display_spine_width: 变换后的书脊宽度（像素）
+            spine_height: 变换后的书脊高度（像素）
+        """
+
+        # 获取书脊图像尺寸
+        original_spine_h, original_spine_w = spine_img.shape[:2] # mm
+        
+        # 角度转换为弧度
+        spine_angle_rad = np.radians(perspective_angle + spine_spread_angle)
+        hardcover_spine_angle_rad = np.radians(hardcover_spine_angle)
+        
+        # 计算书脊变换参数
+        spine_height = cover_height
+        spine_width = spine_height / self.display_ppmm / original_spine_h * original_spine_w # in mm
+        display_spine_width = spine_width * self.display_ppmm # 放到卷曲映射时再处理，此处完全面向前方避免信息损失
+
+        spine_offset_y_bottom = camera_height * spine_width * np.cos(spine_angle_rad) / (
+            book_distance + spine_width * np.cos(spine_angle_rad)) 
+        spine_offset_y_top = camera_height_complement * spine_width * np.cos(spine_angle_rad) / (
+            book_distance + spine_width * np.cos(spine_angle_rad)) 
+        
+        # 创建书脊透视变换
+        spine_points = np.float32([[0, 0], [original_spine_w, 0], 
+                        [original_spine_w, original_spine_h], [0, original_spine_h]])
+        spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
+                        [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
+        spine_matrix = cv2.getPerspectiveTransform(spine_points, spine_transformed)
+        spine_warped = cv2.warpPerspective(
+            spine_img, spine_matrix, (int(display_spine_width), int(spine_height)),
+            borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
+        )
+        
+         # 应用逐列像素处理函数
+        spine_warped = self.process_spine_pixels_column(spine_warped, spine_angle_rad, hardcover_spine_angle_rad, display_spine_width)
+        
+        return spine_warped, display_spine_width, spine_height
+    
+    def process_spine_pixels_column(self, 
+                                    spine_warped, spine_angle_rad, 
+                                    hardcover_spine_angle_rad, 
+                                    display_spine_width):
+        """
+        对书脊图像进行逐列像素处理，每一列的位置由x映射到函数f(x)
+        
+        参数:
+            spine_warped: 变换后的书脊图像
+            spine_angle_rad: 书脊角度（弧度）
+            hardcover_spine_angle_rad: 精装书脊圆心角（弧度）
+            display_spine_width: 显示的书脊宽度
+            
+        返回:
+            processed_image: 处理后的图像
+        """
+        # 重命名参数以简化使用
+        theta = spine_angle_rad  # 书脊角度
+        alpha = hardcover_spine_angle_rad  # 精装书脊圆心角
+        w = int(display_spine_width)  # 显示的书脊宽度
+        
+        # 创建空白输出图像，尺寸与 spine_warped 一致
+        processed_image = np.zeros_like(spine_warped)
+        
+        # 从左到右逐列处理
+        for x in range(w):
+            # 定义映射函数f(x)，这里使用一个简单的取反示例
+            # 对于x列，我们将其映射到新的位置new_x
+            # 这里使用的函数是：new_x = width - 1 - x（简单的左右翻转）
+            # 根据给定公式计算 new_x，其中 x 替换为 (w - x)
+            alpha_half = hardcover_spine_angle_rad / 2
+            theta = np.pi / 2 - spine_angle_rad
+            new_x = int((w / np.sin(alpha_half)) *
+                        np.sin(alpha_half * (w - x) / w) *
+                        np.cos(alpha_half - theta - alpha_half * (w - x) / w))
+            
+            # 确保new_x在有效范围内
+            if 0 <= new_x < w:
+                # 将x列的像素复制到new_x列
+                # 注意：由于我们是从左到右处理，后处理的列可能会覆盖先处理的列
+                # 这正是用户要求的效果
+                processed_image[:, w - new_x - 1] = spine_warped[:, x]
+        
+        return processed_image
+
+    
     def generate_3d_cover(self, cover_img, spine_img, perspective_angle, 
-                          book_distance, cover_width, bg_color_bgr, bg_alpha=255, 
-                          spine_spread_angle=0, camera_height_ratio=0.5):
+                          book_distance, cover_width, 
+                          bg_color_bgr=(255, 255, 255), bg_alpha=255, 
+                          spine_spread_angle=0, camera_height_ratio=0.5, 
+                          book_type="平装", hardcover_spine_angle=180):
         """
         生成3D封面效果
         
@@ -48,11 +202,9 @@ class BookCoverRenderer:
         
         # 获取图像尺寸
         original_cover_h, original_cover_w = cover.shape[:2] # mm
-        original_spine_h, original_spine_w = spine.shape[:2] # mm
         
         # 角度转换为弧度
         angle_rad = np.radians(perspective_angle)
-        spine_angle_rad = np.radians(perspective_angle + spine_spread_angle)
 
         # 计算封面变换参数
         cover_height = self.display_ppmm * cover_width / original_cover_w * original_cover_h
@@ -68,16 +220,6 @@ class BookCoverRenderer:
         offset_y_top = camera_height_complement * cover_width * np.sin(angle_rad) / (
             book_distance + cover_width * np.sin(angle_rad))
 
-        # 计算书脊变换参数
-        spine_height = cover_height
-        spine_width = spine_height / self.display_ppmm / original_spine_h * original_spine_w # in mm
-        
-        display_spine_width = spine_width * self.display_ppmm * np.sin(spine_angle_rad) # in pixel
-        spine_offset_y_bottom = camera_height * spine_width * np.cos(spine_angle_rad) / (
-            book_distance + spine_width * np.cos(spine_angle_rad)) 
-        spine_offset_y_top = camera_height_complement * spine_width * np.cos(spine_angle_rad) / (
-            book_distance + spine_width * np.cos(spine_angle_rad)) 
-
         # 创建封面透视变换
         cover_points = np.float32([[0, 0], [original_cover_w, 0], 
                         [original_cover_w, original_cover_h], [0, original_cover_h]])
@@ -89,16 +231,17 @@ class BookCoverRenderer:
             borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
         )
         
-        # 创建书脊透视变换
-        spine_points = np.float32([[0, 0], [original_spine_w, 0], 
-                        [original_spine_w, original_spine_h], [0, original_spine_h]])
-        spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
-                        [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
-        spine_matrix = cv2.getPerspectiveTransform(spine_points, spine_transformed)
-        spine_warped = cv2.warpPerspective(
-            spine, spine_matrix, (int(display_spine_width), int(spine_height)),
-            borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
-        )
+        # 根据书型选择不同的书脊变换方法
+        if book_type == "精装":
+            spine_warped, display_spine_width, spine_height = self.transform_spine_hardcover(
+                spine, perspective_angle, spine_spread_angle, book_distance, 
+                cover_height, camera_height, camera_height_complement, bg_color_bgr, hardcover_spine_angle
+            )
+        else:  # 平装
+            spine_warped, display_spine_width, spine_height = self.transform_spine(
+                spine, perspective_angle, spine_spread_angle, book_distance, 
+                cover_height, camera_height, camera_height_complement, bg_color_bgr
+            )
         
         # 创建最终图像
         final_width = int(display_cover_width) + int(display_spine_width)

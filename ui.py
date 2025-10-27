@@ -21,6 +21,8 @@ def setup_ui():
         final_size: 最终图像尺寸（像素）
         border_percentage: 边框占比
         multi_spine_mode: 是否启用多书脊模式
+        book_type: 书型（平装/精装）
+        hardcover_spine_angle: 精装书脊圆心角（度）
     """
     # 初始化session_state以保存状态值
     if 'spine_spread_angle' not in st.session_state:
@@ -56,6 +58,21 @@ def setup_ui():
             st.subheader("输出图像设置")
             final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
             border_percentage = st.slider("边框占比", 0.0, 0.2, 0.1, step=0.01)
+
+        # 添加书型选择（平装/精装）
+        book_type = st.radio(
+            "选择书型",
+            options=["平装", "精装"],
+            index=0,
+        )
+
+        hardcover_spine_angle = st.slider(
+            "精装书脊圆心角（°）",
+            60, 
+            180, 
+            120,
+            help="设置精装书书脊的圆弧形圆心角，值越大，书脊越平坦",
+        )
         
         perspective_angle = st.slider("旋转角度（°）", 1, 89, 35)
         
@@ -125,3 +142,10 @@ def setup_ui():
     return cover_image, spine_image, spine_images, result_placeholder, download_placeholder, \
            book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, \
            camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode
+
+    # 返回st.session_state中的值，确保使用最新的状态值
+    # 返回所有参数，包括新添加的final_size和border_percentage
+    return cover_image, spine_image, result_placeholder, download_placeholder, \
+           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, \
+           st.session_state.spine_spread_angle, camera_height_ratio, final_size, border_percentage, \
+           book_type, hardcover_spine_angle
