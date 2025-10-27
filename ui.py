@@ -138,14 +138,8 @@ def setup_ui():
         result_placeholder = st.empty()
         download_placeholder = st.empty()
     
-    # 返回所有参数，包括新添加的多书脊相关参数
+    # 返回所有参数，包括新添加的多书脊相关参数和书型参数
     return cover_image, spine_image, spine_images, result_placeholder, download_placeholder, \
            book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, \
-           camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode
-
-    # 返回st.session_state中的值，确保使用最新的状态值
-    # 返回所有参数，包括新添加的final_size和border_percentage
-    return cover_image, spine_image, result_placeholder, download_placeholder, \
-           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, \
-           st.session_state.spine_spread_angle, camera_height_ratio, final_size, border_percentage, \
+           camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode, \
            book_type, hardcover_spine_angle

@@ -4,33 +4,27 @@ import streamlit as st
 from renderer import BookCoverRenderer
 
 
-def process_images(cover_image, spine_image, spine_images, result_placeholder, download_placeholder,
-                   book_distance, cover_width, perspective_angle, 
-                   bg_color, bg_alpha, 
-                   spine_spread_angle=0, camera_height_ratio=0.5, 
-                   final_size=1200, border_percentage=0.08, 
-                   book_type="平装", hardcover_spine_angle=180):
+def process_images(
+    cover_image,              # 上传的封面图片
+    spine_image,              # 上传的单个书脊图片（单书脊模式）
+    spine_images,             # 上传的多个书脊图片列表（多书脊模式）
+    result_placeholder,       # 渲染结果占位符
+    download_placeholder,     # 下载按钮占位符
+    book_distance,            # 相机与书距离（mm）
+    cover_width,              # 开本宽度（mm）
+    perspective_angle,        # 旋转角度（度）
+    bg_color,                 # 背景颜色（十六进制）
+    bg_alpha,                 # 背景透明度
+    spine_spread_angle,       # 书脊额外展开角度
+    camera_height_ratio,      # 相机高度比例
+    final_size,               # 最终图像尺寸
+    border_percentage,        # 边框占最终图像的比例
+    multi_spine_mode,         # 是否启用多书脊模式
+    book_type,                # 书型（平装/精装）
+    hardcover_spine_angle     # 精装书脊圆心角（度）
+):
     """
     处理上传的图片并生成3D封面
-    
-    参数:
-        cover_image: 上传的封面图片
-        spine_image: 上传的单个书脊图片（单书脊模式）
-        spine_images: 上传的多个书脊图片列表（多书脊模式）
-        result_placeholder: 渲染结果占位符
-        download_placeholder: 下载按钮占位符
-        book_distance: 相机与书距离（mm）
-        cover_width: 开本宽度（mm）
-        perspective_angle: 旋转角度（度）
-        bg_color: 背景颜色（十六进制）
-        bg_alpha: 背景透明度
-        spine_spread_angle: 书脊额外展开角度
-        camera_height_ratio: 相机高度比例
-        final_size: 最终图像尺寸
-        border_percentage: 边框占最终图像的比例
-        multi_spine_mode: 是否启用多书脊模式
-        book_type: 书型（平装/精装）
-        hardcover_spine_angle: 精装书脊圆心角（度）
     """
     # 检查是否有封面图片和有效的书脊图片
     if not cover_image:
@@ -53,9 +47,9 @@ def process_images(cover_image, spine_image, spine_images, result_placeholder, d
         if multi_spine_mode:
             # 多书脊模式：读取所有书脊图片
             spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
-            # 暂时选择第一张作为单书脊渲染，后续可扩展多书脊处理
-            spine_img = spine_img_list[0]
-            # 这里可以添加多书脊处理逻辑，但根据需求暂时留白
+            # 使用merge_spines函数将多个书脊拼合为一个
+            renderer = BookCoverRenderer()
+            spine_img = renderer.merge_spines(spine_img_list)
         else:
             # 单书脊模式：读取单个书脊图片
             spine_img = Image.open(spine_image).convert('RGB')
@@ -66,21 +60,52 @@ def process_images(cover_image, spine_image, spine_images, result_placeholder, d
     # 显示上传的图片预览
     st.subheader("上传的图片预览")
     
+    # 统一多书脊和单书脊的预览形式
+    # 从右向左排列：封面、书脊1、书脊2...
+    # 预览时将图片高度调整为300px，但保持原始图片数据不变
+    
+    # 准备所有要显示的图片列表（封面 + 所有书脊）
     if multi_spine_mode and spine_images:
-        # 多书脊模式：显示封面和多张书脊图片
-        cols = st.columns(len(spine_images) + 1)
-        # 显示封面
-        cols[0].image(cover_img, caption="封面图片", width='content')
-        # 显示所有书脊图片
-        for i, spine_img_item in enumerate(spine_img_list):
-            cols[i+1].image(spine_img_item, caption=f"书脊图片 {i+1}", width='content')
+        # 多书脊模式：封面 + 所有书脊图片
+        display_images = [cover_img] + spine_img_list
+        display_captions = ["封面图片"] + [f"书脊图片 {i+1}" for i in range(len(spine_img_list))]
     else:
-        # 单书脊模式：显示封面和单张书脊图片
-        img_col1, img_col2 = st.columns(2)
-        with img_col1:
-            st.image(spine_img, caption="书脊图片", width='content')
-        with img_col2:
-            st.image(cover_img, caption="封面图片", width='content')
+        # 单书脊模式：封面 + 单个书脊图片
+        # 对于单书脊，我们需要使用原始的spine_image来显示，而不是可能被拼合过的spine_img
+        if not multi_spine_mode and spine_image:
+            original_spine_img = Image.open(spine_image).convert('RGB')
+            display_images = [cover_img, original_spine_img]
+            display_captions = ["封面图片", "书脊图片"]
+        else:
+            display_images = []
+            display_captions = []
+    
+    # 使用Streamlit原生布局显示图片
+    if display_images:
+        # 创建一个水平容器
+        horizontal_container = st.container()
+        
+        # 在水平容器中创建一个行
+        with horizontal_container:
+            # 从右向左显示：先反转图片列表
+            reversed_images = list(reversed(display_images))
+            reversed_captions = list(reversed(display_captions))
+            
+            # 使用水平布局显示图片
+            cols = st.columns(len(reversed_images), gap="small")
+            
+            # 为每个图片分配一个列
+            for i, (img, caption) in enumerate(zip(reversed_images, reversed_captions)):
+                # 计算显示宽度，保持原始宽高比，高度为300px
+                width_percent = 300 / float(img.size[1])
+                new_width = int((float(img.size[0]) * float(width_percent)))
+                
+                # 在对应的列中直接显示原图，并设置显示宽度
+                with cols[i]:
+                    st.image(img, caption=caption, width=new_width, clamp=True)
+                    # 如果图片特别宽，可以添加横向滚动条
+                    if new_width > 400:
+                        st.caption(f"图片宽度: {new_width}px")
     
     # 生成3D封面
     with st.spinner("正在渲染3D封面..."):
@@ -107,8 +132,8 @@ def process_images(cover_image, spine_image, spine_images, result_placeholder, d
             # 后处理
             result_image = renderer.post_process_image(
                 result_image,
-                final_size=final_size,  # 使用传入的参数
-                border_percentage=border_percentage,  # 使用传入的参数
+                final_size=final_size, 
+                border_percentage=border_percentage, 
                 bg_color_rgb=rgb_bg,
                 bg_alpha=alpha_value
             )
