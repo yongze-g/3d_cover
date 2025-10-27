@@ -7,7 +7,8 @@ def setup_ui():
     
     返回:
         cover_image: 上传的封面图片
-        spine_image: 上传的书脊图片
+        spine_image: 上传的单个书脊图片（单书脊模式）
+        spine_images: 上传的多个书脊图片列表（多书脊模式）
         result_placeholder: 渲染结果占位符
         download_placeholder: 下载按钮占位符
         book_distance: 相机与书距离（mm）
@@ -17,10 +18,17 @@ def setup_ui():
         bg_alpha: 背景不透明度（0-100）
         spine_spread_angle: 书脊额外展开角度（度）
         camera_height_ratio: 相机相对高度比例（0-1）
+        final_size: 最终图像尺寸（像素）
+        border_percentage: 边框占比
+        multi_spine_mode: 是否启用多书脊模式
     """
-    # 初始化session_state以保存spine_spread_angle值
+    # 初始化session_state以保存状态值
     if 'spine_spread_angle' not in st.session_state:
         st.session_state.spine_spread_angle = 0
+    
+    # 初始化多书脊模式开关状态
+    if 'multi_spine_mode' not in st.session_state:
+        st.session_state.multi_spine_mode = False
     
     # 设置页面配置
     st.set_page_config(
@@ -75,7 +83,7 @@ def setup_ui():
         # 渲染参数
         bg_color = st.color_picker("背景颜色", "#ffffff")
         bg_alpha = st.slider("背景不透明度", 0, 100, 100)
-         
+        
         st.markdown("---")
         st.write("📝 使用说明：")
         st.write("1. 上传封面和书脊图片")
@@ -89,14 +97,31 @@ def setup_ui():
     with col1:
         st.header("上传图片")
         cover_image = st.file_uploader("上传封面图片", type=["png", "jpg", "jpeg"])
-        spine_image = st.file_uploader("上传书脊图片", type=["png", "jpg", "jpeg"])
+        
+        # 多书脊模式开关，位于上传书脊边上
+        multi_spine_mode = st.checkbox("启用多书脊模式", value=False, 
+                                     help="启用后可上传多个书脊图片，按上传顺序处理")
+        # 更新session_state
+        st.session_state.multi_spine_mode = multi_spine_mode
+        
+        # 根据多书脊模式选择上传组件
+        if st.session_state.multi_spine_mode:
+            # 多书脊模式 - 支持上传多个文件
+            spine_images = st.file_uploader("上传书脊图片（多个）", type=["png", "jpg", "jpeg"], 
+                                           accept_multiple_files=True)
+            # 设置单个spine_image为None以保持向后兼容性
+            spine_image = None
+        else:
+            # 单书脊模式 - 保持原有功能
+            spine_image = st.file_uploader("上传书脊图片", type=["png", "jpg", "jpeg"])
+            spine_images = []
 
     with col2:
         st.header("渲染结果")
         result_placeholder = st.empty()
         download_placeholder = st.empty()
     
-    # 返回st.session_state中的值，确保使用最新的状态值
-    # 返回所有参数，包括新添加的final_size和border_percentage
-    return cover_image, spine_image, result_placeholder, download_placeholder, \
-           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, camera_height_ratio, final_size, border_percentage
+    # 返回所有参数，包括新添加的多书脊相关参数
+    return cover_image, spine_image, spine_images, result_placeholder, download_placeholder, \
+           book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, \
+           camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode
