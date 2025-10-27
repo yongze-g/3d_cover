@@ -22,14 +22,14 @@ class BookCoverRenderer:
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
     
-    def transform_spine(self, spine_img,                   # BGR格式的书脊图像
-                       perspective_angle,               # 旋转角度（度）
-                       spine_spread_angle,               # 书脊额外展开角度（度）
-                       book_distance,                    # 相机与书距离（mm）
-                       cover_height,                     # 封面高度（像素）
-                       camera_height,                    # 相机高度（像素）
-                       camera_height_complement,         # 封面高度减去相机高度（像素）
-                       bg_color_bgr):                    # 背景颜色（BGR格式）
+    def transform_spine(self, spine_img,                  # BGR格式的书脊图像
+                        perspective_angle,                # 旋转角度（度）
+                        spine_spread_angle,               # 书脊额外展开角度（度）
+                        book_distance,                    # 相机与书距离（mm）
+                        cover_height,                     # 封面高度（像素）
+                        camera_height,                    # 相机高度（像素）
+                        camera_height_complement,         # 封面高度减去相机高度（像素）
+                        bg_color_bgr):                    # 背景颜色（BGR格式）
         """
         处理（平装）书脊图像的变换
         
@@ -67,15 +67,15 @@ class BookCoverRenderer:
         
         return spine_warped, display_spine_width, spine_height
     
-    def transform_spine_hardcover(self, spine_img,                 # BGR格式的书脊图像
-                                 perspective_angle,             # 旋转角度（度）
-                                 spine_spread_angle,             # 书脊额外展开角度（度）
-                                 book_distance,                  # 相机与书距离（mm）
-                                 cover_height,                   # 封面高度（像素）
-                                 camera_height,                  # 相机高度（像素）
-                                 camera_height_complement,       # 封面高度减去相机高度（像素）
-                                 bg_color_bgr,                   # 背景颜色（BGR格式）
-                                 hardcover_spine_angle):         # 精装书脊圆心角（度）
+    def transform_spine_hardcover(self, spine_img,                # BGR格式的书脊图像
+                                  perspective_angle,              # 旋转角度（度）
+                                  spine_spread_angle,             # 书脊额外展开角度（度）
+                                  book_distance,                  # 相机与书距离（mm）
+                                  cover_height,                   # 封面高度（像素）
+                                  camera_height,                  # 相机高度（像素）
+                                  camera_height_complement,       # 封面高度减去相机高度（像素）
+                                  bg_color_bgr,                   # 背景颜色（BGR格式）
+                                  hardcover_spine_angle):         # 精装书脊圆心角（度）
         """
         处理（精装）书脊图像的变换，考虑书脊的圆弧形
         
@@ -163,16 +163,16 @@ class BookCoverRenderer:
         
         return processed_image
 
-    def generate_3d_cover(self, cover_img,                   # PIL封面图像
-                          spine_img,                    # PIL书脊图像
-                          perspective_angle,            # 旋转角度（度）
+    def generate_3d_cover(self, cover_img,               # PIL封面图像
+                          spine_img,                     # PIL书脊图像
+                          perspective_angle,             # 旋转角度（度）
                           book_distance,                 # 相机与书距离（mm）
                           cover_width,                   # 开本宽度（mm）
                           bg_color_bgr=(255, 255, 255),  # 背景颜色（BGR格式）
                           bg_alpha=255,                  # 背景透明度（0-255）
                           spine_spread_angle=0,          # 书脊额外展开角度（度）
                           camera_height_ratio=0.5,       # 相机相对高度比例（0-1），用于控制3D视角的垂直位置
-                          book_type="平装",              # 书籍类型：精装或平装
+                          book_type="平装",               # 书籍类型：精装或平装
                           hardcover_spine_angle=180):    # 精装书脊圆心角（度）
         """
         生成3D封面效果
@@ -249,14 +249,14 @@ class BookCoverRenderer:
         
         return rgb_image
     
-    def _add_transparency(self, rgb_image,             # RGB格式的基础图像
-                         cover_warped,             # 变换后的封面图像
-                         spine_warped,             # 变换后的书脊图像
-                         display_spine_width,      # 显示的书脊宽度（像素）
-                         cover_height,             # 封面高度（像素）
-                         spine_height,             # 书脊高度（像素）
-                         bg_color_bgr,             # 背景颜色（BGR格式）
-                         bg_alpha):                # 背景透明度（0-255）
+    def _add_transparency(self, rgb_image,          # RGB格式的基础图像
+                          cover_warped,             # 变换后的封面图像
+                          spine_warped,             # 变换后的书脊图像
+                          display_spine_width,      # 显示的书脊宽度（像素）
+                          cover_height,             # 封面高度（像素）
+                          spine_height,             # 书脊高度（像素）
+                          bg_color_bgr,             # 背景颜色（BGR格式）
+                          bg_alpha):                # 背景透明度（0-255）
         """为图像添加透明度，仅背景透明，内容保持不透明"""
         final_height, final_width = rgb_image.shape[:2]
         
@@ -273,6 +273,41 @@ class BookCoverRenderer:
         
         # 合并RGB和Alpha通道
         return cv2.merge([rgb_image, alpha_channel])
+    
+    def overlay_shadow(self, original_image, shadow_image):
+        """
+        叠加阴影
+        
+        参数:
+            original_image: 原图片A（BGR格式）
+            shadow_image: 阴影图片B（BGR格式，带有Alpha通道）
+            
+        返回:
+            叠加阴影后的新图像（BGR格式）
+        """
+        # 获取原图片尺寸
+        original_height, original_width = original_image.shape[:2]
+        
+        # 将阴影图片调整到与原图片相同的尺寸
+        resized_shadow = cv2.resize(shadow_image, (original_width, original_height))
+        
+        # 检查阴影图片是否有Alpha通道
+        if resized_shadow.shape[2] == 4:
+            # 分离阴影图像的BGR和Alpha通道
+            shadow_bgr = resized_shadow[:, :, :3]
+            shadow_alpha = resized_shadow[:, :, 3] / 255.0  # 转换为0-1范围
+            
+            # 创建结果图像
+            result = original_image.copy()
+            
+            # 叠加阴影（使用Alpha通道作为权重）
+            for c in range(3):  # 遍历BGR通道
+                result[:, :, c] = (1 - shadow_alpha) * original_image[:, :, c] + shadow_alpha * shadow_bgr[:, :, c]
+        else:
+            # 如果没有Alpha通道，直接叠加（假设阴影已经处理好透明度）
+            result = cv2.addWeighted(original_image, 1.0, resized_shadow, 0.5, 0)
+        
+        return result
     
     def merge_spines(self, spine_images):
         """
@@ -323,11 +358,11 @@ class BookCoverRenderer:
         from PIL import Image
         return Image.fromarray(merged_rgb)
         
-    def post_process_image(self, img_array,  # 输入图像（RGB或RGBA格式）
-                          final_size=1200,  # 最终成图的目标尺寸（正方形）
-                          border_percentage=0.08,  # 边框宽度占最终成图尺寸的比例（0-1之间）
-                          bg_color_rgb=(255, 255, 255),  # 背景颜色（RGB格式）
-                          bg_alpha=255):  # 背景透明度
+    def post_process_image(self, img_array,               # 输入图像（RGB或RGBA格式）
+                           final_size=1200,               # 最终成图的目标尺寸（正方形）
+                           border_percentage=0.08,        # 边框宽度占最终成图尺寸的比例（0-1之间）
+                           bg_color_rgb=(255, 255, 255),  # 背景颜色（RGB格式）
+                           bg_alpha=255):                 # 背景透明度
         """
         对生成的3D封面进行后处理：添加外框并调整尺寸到最终大小
         """
