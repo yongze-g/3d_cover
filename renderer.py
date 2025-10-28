@@ -274,7 +274,7 @@ class BookCoverRenderer:
         # 合并RGB和Alpha通道
         return cv2.merge([rgb_image, alpha_channel])
     
-    def overlay_shadow(self, original_image, shadow_image):
+    def overlay_shadow(self, original_image, shadow_image = "shadows/linear.png"):
         """
         叠加阴影
         

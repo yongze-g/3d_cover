@@ -21,7 +21,8 @@ def process_images(
     border_percentage,        # 边框占最终图像的比例
     multi_spine_mode,         # 是否启用多书脊模式
     book_type,                # 书型（平装/精装）
-    hardcover_spine_angle     # 精装书脊圆心角（度）
+    hardcover_spine_angle,    # 精装书脊圆心角（度）
+    spine_shadow_mode         # 书脊阴影模式（无/线性）
 ):
     """
     处理上传的图片并生成3D封面
@@ -44,11 +45,89 @@ def process_images(
     try:
         cover_img = Image.open(cover_image).convert('RGB')
         
+        # 初始化渲染器
+        renderer = BookCoverRenderer()
+        
+        # 读取所有原始图片（用于预览显示，不应用阴影效果）
+        original_spine_img_list = []
+        if multi_spine_mode and spine_images:
+            original_spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
+        elif not multi_spine_mode and spine_image:
+            original_spine_img = Image.open(spine_image).convert('RGB')
+        
+        # 显示上传的图片预览（使用原始图片，不应用阴影）
+        st.subheader("上传的图片预览")
+        
+        # 准备所有要显示的图片列表（封面 + 所有书脊）
+        display_images = []
+        display_captions = []
+        
+        if multi_spine_mode and spine_images:
+            # 多书脊模式：封面 + 所有原始书脊图片
+            display_images = [cover_img] + original_spine_img_list
+            display_captions = ["封面图片"] + [f"书脊图片 {i+1}" for i in range(len(original_spine_img_list))]
+        elif not multi_spine_mode and spine_image:
+            # 单书脊模式：封面 + 单个原始书脊图片
+            display_images = [cover_img, original_spine_img]
+            display_captions = ["封面图片", "书脊图片"]
+        
+        # 使用Streamlit原生布局显示图片
+        if display_images:
+            # 创建一个水平容器
+            horizontal_container = st.container()
+            
+            # 在水平容器中创建一个行
+            with horizontal_container:
+                # 从右向左显示：先反转图片列表
+                reversed_images = list(reversed(display_images))
+                reversed_captions = list(reversed(display_captions))
+                
+                # 使用水平布局显示图片
+                cols = st.columns(len(reversed_images), gap="small")
+                
+                # 为每个图片分配一个列
+                for i, (img, caption) in enumerate(zip(reversed_images, reversed_captions)):
+                    # 计算显示宽度，保持原始宽高比，高度为300px
+                    width_percent = 300 / float(img.size[1])
+                    new_width = int((float(img.size[0]) * float(width_percent)))
+                    
+                    # 在对应的列中直接显示原图，并设置显示宽度
+                    with cols[i]:
+                        st.image(img, caption=caption, width=new_width, clamp=True)
+                        # 如果图片特别宽，可以添加横向滚动条
+                        if new_width > 400:
+                            st.caption(f"图片宽度: {new_width}px")
+        
+        # 处理图片用于渲染（可能应用阴影效果）
         if multi_spine_mode:
             # 多书脊模式：读取所有书脊图片
             spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
+            
+            # 如果选择线性书脊阴影模式，对每个书脊图片分别应用阴影效果
+            if spine_shadow_mode == "线性":
+                import cv2
+                import numpy as np
+                
+                # 加载阴影图片
+                shadow_path = 'shadows/linear.png'
+                try:
+                    shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
+                    
+                    # 对每个书脊图片应用阴影
+                    for i in range(len(spine_img_list)):
+                        # 将PIL图像转换为OpenCV格式进行处理
+                        spine_array = np.array(spine_img_list[i])
+                        spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
+                        
+                        # 应用阴影
+                        spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
+                        
+                        # 将处理后的图像转回PIL格式
+                        spine_img_list[i] = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
+                except Exception as shadow_error:
+                    st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
+            
             # 使用merge_spines函数将多个书脊拼合为一个
-            renderer = BookCoverRenderer()
             spine_img = renderer.merge_spines(spine_img_list)
         else:
             # 单书脊模式：读取单个书脊图片
@@ -57,55 +136,8 @@ def process_images(
         st.error(f"图片读取失败: {str(e)}")
         return
     
-    # 显示上传的图片预览
-    st.subheader("上传的图片预览")
-    
-    # 统一多书脊和单书脊的预览形式
-    # 从右向左排列：封面、书脊1、书脊2...
-    # 预览时将图片高度调整为300px，但保持原始图片数据不变
-    
-    # 准备所有要显示的图片列表（封面 + 所有书脊）
-    if multi_spine_mode and spine_images:
-        # 多书脊模式：封面 + 所有书脊图片
-        display_images = [cover_img] + spine_img_list
-        display_captions = ["封面图片"] + [f"书脊图片 {i+1}" for i in range(len(spine_img_list))]
-    else:
-        # 单书脊模式：封面 + 单个书脊图片
-        # 对于单书脊，我们需要使用原始的spine_image来显示，而不是可能被拼合过的spine_img
-        if not multi_spine_mode and spine_image:
-            original_spine_img = Image.open(spine_image).convert('RGB')
-            display_images = [cover_img, original_spine_img]
-            display_captions = ["封面图片", "书脊图片"]
-        else:
-            display_images = []
-            display_captions = []
-    
-    # 使用Streamlit原生布局显示图片
-    if display_images:
-        # 创建一个水平容器
-        horizontal_container = st.container()
-        
-        # 在水平容器中创建一个行
-        with horizontal_container:
-            # 从右向左显示：先反转图片列表
-            reversed_images = list(reversed(display_images))
-            reversed_captions = list(reversed(display_captions))
-            
-            # 使用水平布局显示图片
-            cols = st.columns(len(reversed_images), gap="small")
-            
-            # 为每个图片分配一个列
-            for i, (img, caption) in enumerate(zip(reversed_images, reversed_captions)):
-                # 计算显示宽度，保持原始宽高比，高度为300px
-                width_percent = 300 / float(img.size[1])
-                new_width = int((float(img.size[0]) * float(width_percent)))
-                
-                # 在对应的列中直接显示原图，并设置显示宽度
-                with cols[i]:
-                    st.image(img, caption=caption, width=new_width, clamp=True)
-                    # 如果图片特别宽，可以添加横向滚动条
-                    if new_width > 400:
-                        st.caption(f"图片宽度: {new_width}px")
+    # 统一多书脊和单书脊的预览形式 - 预览逻辑已移至图片读取后立即执行
+    # 这样确保预览显示的是原始图片，不会受到阴影处理的影响
     
     # 生成3D封面
     with st.spinner("正在渲染3D封面..."):
@@ -117,6 +149,28 @@ def process_images(
             alpha_value = int(bg_alpha * 255 / 100)
             rgb_bg = renderer.hex_to_rgb(bg_color)
             bgr_bg = rgb_bg[2], rgb_bg[1], rgb_bg[0]  # 转换为BGR格式
+            
+            # 单书脊模式：如果选择线性书脊阴影模式，应用阴影效果到书脊图片上
+            if not multi_spine_mode and spine_shadow_mode == "线性":
+                import cv2
+                import numpy as np
+                
+                # 加载阴影图片
+                shadow_path = 'shadows/linear.png'
+                try:
+                    shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
+                    
+                    # 将PIL图像转换为OpenCV格式进行处理
+                    spine_array = np.array(spine_img)
+                    spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
+                    
+                    # 应用阴影
+                    spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
+                    
+                    # 将处理后的图像转回PIL格式
+                    spine_img = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
+                except Exception as shadow_error:
+                    st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
             
             # 生成3D封面
             result_image = renderer.generate_3d_cover(

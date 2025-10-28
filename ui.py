@@ -50,28 +50,38 @@ def setup_ui():
         # 使用expander实现折叠设置
         with st.expander("高级设置", expanded=False):
             # 图书尺寸参数
+            st.subheader("透视参数")
             book_distance = st.slider("相机与书距离（mm）", 300, 1000, 800)
-            cover_width = st.slider("开本宽度（mm）", 120, 200, 187)
             camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
             
             # 输出图像参数
-            st.subheader("输出图像设置")
+            st.subheader("输出图像参数")
             final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
             border_percentage = st.slider("边框占比", 0.0, 0.2, 0.1, step=0.01)
 
-        # 添加书型选择（平装/精装）
-        book_type = st.radio(
-            "选择书型",
-            options=["平装", "精装"],
-            index=0,
-        )
+        with st.expander("未完成功能", expanded=False):
+            # 添加书型选择（平装/精装）
+            book_type = st.radio(
+                "选择书型",
+                options=["平装", "精装"],
+                index=0,
+            )
 
-        hardcover_spine_angle = st.slider(
-            "精装书脊圆心角（°）",
-            60, 
-            180, 
-            120,
-            help="设置精装书书脊的圆弧形圆心角，值越大，书脊越平坦",
+            hardcover_spine_angle = st.slider(
+                "精装书脊圆心角（°）",
+                60, 
+                180, 
+                120
+            )
+
+        cover_width = st.slider("开本宽度（mm）", 120, 200, 187, 
+                                help="成品图基于真实空间尺寸计算，开本宽度不同会导致3D效果的深度不同会导致透视程度不同") 
+    
+        # 书脊阴影模式选择
+        spine_shadow_mode = st.radio(
+            "书脊阴影模式",
+            options=["无", "线性"],
+            index=1
         )
         
         perspective_angle = st.slider("旋转角度（°）", 1, 89, 35)
@@ -100,13 +110,6 @@ def setup_ui():
         # 渲染参数
         bg_color = st.color_picker("背景颜色", "#ffffff")
         bg_alpha = st.slider("背景不透明度", 0, 100, 100)
-        
-        st.markdown("---")
-        st.write("📝 使用说明：")
-        st.write("1. 上传封面和书脊图片")
-        st.write("2. 调整左侧参数")
-        st.write("3. 查看预览效果")
-        st.write("4. 下载渲染结果")
 
     # 主内容区域 - 文件上传和渲染
     col1, col2 = st.columns(2)
@@ -117,7 +120,7 @@ def setup_ui():
         
         # 多书脊模式开关，位于上传书脊边上
         multi_spine_mode = st.checkbox("启用多书脊模式", value=False, 
-                                     help="启用后可上传多个书脊图片，按上传顺序处理")
+                                       help="套书请启用多书脊模式，并按从前到后顺序上传书脊")
         # 更新session_state
         st.session_state.multi_spine_mode = multi_spine_mode
         
@@ -142,4 +145,4 @@ def setup_ui():
     return cover_image, spine_image, spine_images, result_placeholder, download_placeholder, \
            book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, \
            camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode, \
-           book_type, hardcover_spine_angle
+           book_type, hardcover_spine_angle, spine_shadow_mode
