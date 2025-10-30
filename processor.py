@@ -21,7 +21,6 @@ def process_images(
     border_percentage,        # 边框占最终图像的比例
     multi_spine_mode,         # 是否启用多书脊模式
     book_type,                # 书型（平装/精装）
-    hardcover_spine_angle,    # 精装书脊圆心角（度）
     spine_shadow_mode         # 书脊阴影模式（无/线性）
 ):
     """
@@ -179,8 +178,7 @@ def process_images(
                 bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
                 spine_spread_angle=spine_spread_angle,
                 camera_height_ratio=camera_height_ratio,
-                book_type=book_type,
-                hardcover_spine_angle=hardcover_spine_angle
+                book_type=book_type
             )
 
             # 后处理

@@ -22,7 +22,6 @@ def setup_ui():
         border_percentage: 边框占比
         multi_spine_mode: 是否启用多书脊模式
         book_type: 书型（平装/精装）
-        hardcover_spine_angle: 精装书脊圆心角（度）
     """
     # 初始化session_state以保存状态值
     if 'spine_spread_angle' not in st.session_state:
@@ -65,13 +64,6 @@ def setup_ui():
                 "选择书型",
                 options=["平装", "精装"],
                 index=0,
-            )
-
-            hardcover_spine_angle = st.slider(
-                "精装书脊圆心角（°）",
-                60, 
-                180, 
-                120
             )
 
         cover_width = st.slider("开本宽度（mm）", 120, 200, 187, 
@@ -145,4 +137,4 @@ def setup_ui():
     return cover_image, spine_image, spine_images, result_placeholder, download_placeholder, \
            book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, \
            camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode, \
-           book_type, hardcover_spine_angle, spine_shadow_mode
+           book_type, spine_shadow_mode

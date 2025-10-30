@@ -74,10 +74,11 @@ class BookCoverRenderer:
                                   cover_height,                   # 封面高度（像素）
                                   camera_height,                  # 相机高度（像素）
                                   camera_height_complement,       # 封面高度减去相机高度（像素）
-                                  bg_color_bgr,                   # 背景颜色（BGR格式）
-                                  hardcover_spine_angle):         # 精装书脊圆心角（度）
+                                  bg_color_bgr):                  # 背景颜色（BGR格式）
         """
         处理（精装）书脊图像的变换，考虑书脊的圆弧形
+        简单地采用四分之一椭圆。然而，这样的书脊透视逻辑实际上跟书封不统一。这一方面是为了简化逻辑，
+        另一方面是为了避免圆弧突出书本身的轮廓（这是一个尚未良好定义的轮廓），而在多书并列时产生不必要的遮挡
         
         返回:
             spine_warped: 变换后的书脊图像
@@ -90,12 +91,11 @@ class BookCoverRenderer:
         
         # 角度转换为弧度
         spine_angle_rad = np.radians(perspective_angle + spine_spread_angle)
-        hardcover_spine_angle_rad = np.radians(hardcover_spine_angle)
         
         # 计算书脊变换参数
         spine_height = cover_height
         spine_width = spine_height / self.display_ppmm / original_spine_h * original_spine_w # in mm
-        display_spine_width = spine_width * self.display_ppmm # 放到卷曲映射时再处理，此处完全面向前方避免信息损失
+        display_spine_width = spine_width * self.display_ppmm * np.sin(spine_angle_rad) 
 
         spine_offset_y_bottom = camera_height * spine_width * np.cos(spine_angle_rad) / (
             book_distance + spine_width * np.cos(spine_angle_rad)) 
@@ -105,61 +105,98 @@ class BookCoverRenderer:
         # 创建书脊透视变换
         spine_points = np.float32([[0, 0], [original_spine_w, 0], 
                         [original_spine_w, original_spine_h], [0, original_spine_h]])
-        spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
-                        [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
+        # spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
+        #                 [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
+        spine_transformed = np.float32([[0, 0], [display_spine_width, 0], 
+                        [display_spine_width, spine_height], [0, spine_height]])
         spine_matrix = cv2.getPerspectiveTransform(spine_points, spine_transformed)
         spine_warped = cv2.warpPerspective(
             spine_img, spine_matrix, (int(display_spine_width), int(spine_height)),
             borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
         )
         
-         # 应用逐列像素处理函数
-        spine_warped = self.process_spine_pixels_column(spine_warped, spine_angle_rad, hardcover_spine_angle_rad, display_spine_width)
+         # 应用逐列像素处理函数，传入背景颜色用于空白填充
+        spine_warped = self.process_spine_pixels_column(spine_warped, spine_angle_rad, spine_offset_y_top, spine_offset_y_bottom, display_spine_width, bg_color_bgr)
         
         return spine_warped, display_spine_width, spine_height
     
     def process_spine_pixels_column(self, 
                                     spine_warped,          # 变换后的书脊图像
                                     spine_angle_rad,       # 书脊角度（弧度）
-                                    hardcover_spine_angle_rad,  # 精装书脊圆心角（弧度）
-                                    display_spine_width):  # 显示的书脊宽度
+                                    spine_offset_y_top,
+                                    spine_offset_y_bottom,
+                                    display_spine_width,   # 显示的书脊宽度
+                                    bg_color_bgr):         # 背景颜色（BGR格式）用于填充
         """
-        对书脊图像进行逐列像素处理，每一列的位置由x映射到函数f(x)
+        对书脊图像进行逐列像素处理，实现四分之一椭圆缩放效果
+        - 最右侧列完全不变
+        - 最左侧列上下分别偏移spine_offset_y_top和spine_offset_y_bottom
+        - 中间列按四分之一椭圆规律缩放
         
         返回:
             processed_image: 处理后的图像
         """
         # 重命名参数以简化使用
         theta = spine_angle_rad  # 书脊角度
-        # alpha = hardcover_spine_angle_rad  # 精装书脊圆心角（暂时不使用）
         w = int(display_spine_width)  # 显示的书脊宽度
+        h = spine_warped.shape[0]  # 书脊高度
         
         # 创建空白输出图像，尺寸与 spine_warped 一致
         processed_image = np.zeros_like(spine_warped)
         
         # 从左到右逐列处理
         for x in range(w):
-            # 暂时不处理精装的问题，直接返回原始图像（复制原图像数据）
-            processed_image[:, x] = spine_warped[:, x]
+            # 计算当前列的偏移因子
+            # 归一化的x坐标（相对于书脊宽度的比例）
+            normalized_x = (w - x - 1) / w
             
-        # # 原精装处理逻辑（暂时注释掉）
-        # for x in range(w):
-        #     # 定义映射函数f(x)，这里使用一个简单的取反示例
-        #     # 对于x列，我们将其映射到新的位置new_x
-        #     # 这里使用的函数是：new_x = width - 1 - x（简单的左右翻转）
-        #     # 根据给定公式计算 new_x，其中 x 替换为 (w - x)
-        #     alpha_half = hardcover_spine_angle_rad / 2
-        #     theta = np.pi / 2 - spine_angle_rad
-        #     new_x = int((w / np.sin(alpha_half)) *
-        #                 np.sin(alpha_half * (w - x) / w) *
-        #                 np.cos(alpha_half - theta - alpha_half * (w - x) / w))
-        #     
-        #     # 确保new_x在有效范围内
-        #     if 0 <= new_x < w:
-        #         # 将x列的像素复制到new_x列
-        #         # 注意：由于我们是从左到右处理，后处理的列可能会覆盖先处理的列
-        #         # 这正是用户要求的效果
-        #         processed_image[:, w - new_x - 1] = spine_warped[:, x]
+            # 使用四分之一椭圆公式计算上部分和下部分的偏移量
+            # 最下方：y=sqrt((1-(x**2/display_spine_width**2)) * spine_off_y_bottom ** 2) - spine_off_y_bottom
+            # 最上方相应改成top
+            
+            # 底部区域偏移量（向下偏移为正）
+            if spine_offset_y_bottom > 0:
+                bottom_offset = int(np.sqrt((1 - (normalized_x**2)) * (spine_offset_y_bottom**2)) - spine_offset_y_bottom)
+            else:
+                bottom_offset = 0
+            
+            # 顶部区域偏移量（向上偏移为负）
+            if spine_offset_y_top > 0:
+                top_offset = int(np.sqrt((1 - (normalized_x**2)) * (spine_offset_y_top**2)) - spine_offset_y_top)
+            else:
+                top_offset = 0
+            
+            # 应用偏移到每一行像素
+            for y in range(h):
+                # 确定当前行的偏移量（线性插值）
+                normalized_y = y / h
+                if normalized_y < 0.5:
+                    # 上半部分，使用顶部偏移量的线性插值
+                    current_offset = int(top_offset * (1 - 2 * normalized_y))
+                else:
+                    # 下半部分，使用底部偏移量的线性插值（取负值使图像向上偏转）
+                    current_offset = -int(bottom_offset * (2 * normalized_y - 1))
+                
+                # 计算新的y坐标
+                new_y = y + current_offset
+                
+                # 确保新坐标在有效范围内
+                if 0 <= new_y < h:
+                    processed_image[y, x] = spine_warped[new_y, x]
+            
+            # 使用背景颜色填充空白区域
+            for y in range(h):
+                if not np.any(processed_image[y, x]):
+                    # 直接使用传入的背景颜色填充
+                    processed_image[y, x] = bg_color_bgr
+
+        '''
+        TODO
+         - 多书脊模式下需要单独处理每个书脊
+         - 图像先缩放后扭曲会有毛刺，改变处理顺序
+         - 上下偏移跟平装完全一致，可以合并计算
+         - 变量尽量往外移动，避免重复计算引用
+        '''
         
         return processed_image
 
@@ -172,8 +209,7 @@ class BookCoverRenderer:
                           bg_alpha=255,                  # 背景透明度（0-255）
                           spine_spread_angle=0,          # 书脊额外展开角度（度）
                           camera_height_ratio=0.5,       # 相机相对高度比例（0-1），用于控制3D视角的垂直位置
-                          book_type="平装",               # 书籍类型：精装或平装
-                          hardcover_spine_angle=180):    # 精装书脊圆心角（度）
+                          book_type="平装"):              # 书籍类型：精装或平装
         """
         生成3D封面效果
         
@@ -219,7 +255,7 @@ class BookCoverRenderer:
         if book_type == "精装":
             spine_warped, display_spine_width, spine_height = self.transform_spine_hardcover(
                 spine, perspective_angle, spine_spread_angle, book_distance, 
-                cover_height, camera_height, camera_height_complement, bg_color_bgr, hardcover_spine_angle
+                cover_height, camera_height, camera_height_complement, bg_color_bgr
             )
         else:  # 平装
             spine_warped, display_spine_width, spine_height = self.transform_spine(
