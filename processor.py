@@ -110,7 +110,12 @@ def process_images(
             except Exception as shadow_error:
                 st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
         
-        # 使用merge_spines函数将多个书脊拼合为一个
+        # 根据书型决定是否拼合书脊
+        hardcover_spine_list = None
+        if book_type == "精装":
+            # 精装书模式下，保留原始书脊列表，后续直接传递给generate_3d_cover
+            hardcover_spine_list = spine_img_list.copy()
+        # 使用merge_spines函数将多个书脊拼合为一个（用于平装书或作为精装书的向后兼容）
         spine_img = renderer.merge_spines(spine_img_list)
     except Exception as e:
         st.error(f"图片读取失败: {str(e)}")
@@ -133,14 +138,27 @@ def process_images(
             # 默认使用多书脊模式，阴影处理已在前面完成
             
             # 生成3D封面
-            result_image = renderer.generate_3d_cover(
-                cover_img, spine_img,
-                perspective_angle, book_distance, cover_width,
-                bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
-                spine_spread_angle=spine_spread_angle,
-                camera_height_ratio=camera_height_ratio,
-                book_type=book_type
-            )
+            if book_type == "精装" and hardcover_spine_list is not None:
+                # 精装书模式下，传递书脊数组
+                result_image = renderer.generate_3d_cover(
+                    cover_img, spine_img,
+                    perspective_angle, book_distance, cover_width,
+                    bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
+                    spine_spread_angle=spine_spread_angle,
+                    camera_height_ratio=camera_height_ratio,
+                    book_type=book_type,
+                    spine_imgs=hardcover_spine_list
+                )
+            else:
+                # 平装书或精装书但未提供书脊列表时的默认行为
+                result_image = renderer.generate_3d_cover(
+                    cover_img, spine_img,
+                    perspective_angle, book_distance, cover_width,
+                    bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
+                    spine_spread_angle=spine_spread_angle,
+                    camera_height_ratio=camera_height_ratio,
+                    book_type=book_type
+                )
 
             # 后处理
             result_image = renderer.post_process_image(
