@@ -27,9 +27,7 @@ def setup_ui():
     if 'spine_spread_angle' not in st.session_state:
         st.session_state.spine_spread_angle = 0
     
-    # 初始化多书脊模式开关状态
-    if 'multi_spine_mode' not in st.session_state:
-        st.session_state.multi_spine_mode = False
+    # 移除多书脊模式开关，默认使用多书脊模式
     
     # 设置页面配置
     st.set_page_config(
@@ -110,31 +108,18 @@ def setup_ui():
         st.header("上传图片")
         cover_image = st.file_uploader("上传封面图片", type=["png", "jpg", "jpeg"])
         
-        # 多书脊模式开关，位于上传书脊边上
-        multi_spine_mode = st.checkbox("启用多书脊模式", value=False, 
-                                       help="套书请启用多书脊模式，并按从前到后顺序上传书脊")
-        # 更新session_state
-        st.session_state.multi_spine_mode = multi_spine_mode
-        
-        # 根据多书脊模式选择上传组件
-        if st.session_state.multi_spine_mode:
-            # 多书脊模式 - 支持上传多个文件
-            spine_images = st.file_uploader("上传书脊图片（多个）", type=["png", "jpg", "jpeg"], 
-                                           accept_multiple_files=True)
-            # 设置单个spine_image为None以保持向后兼容性
-            spine_image = None
-        else:
-            # 单书脊模式 - 保持原有功能
-            spine_image = st.file_uploader("上传书脊图片", type=["png", "jpg", "jpeg"])
-            spine_images = []
+        # 默认使用多书脊模式，支持上传多个文件
+        spine_images = st.file_uploader("上传书脊图片（可上传多个）", type=["png", "jpg", "jpeg"], help="对于套书，可以从前到后依次上传书脊。书脊会缩放至统一高度处理", 
+                                       accept_multiple_files=True)
+        # 设置单个spine_image为None以保持向后兼容性
+        spine_image = None
 
     with col2:
         st.header("渲染结果")
         result_placeholder = st.empty()
         download_placeholder = st.empty()
     
-    # 返回所有参数，包括新添加的多书脊相关参数和书型参数
+    # 返回所有参数，移除多书脊模式参数
     return cover_image, spine_image, spine_images, result_placeholder, download_placeholder, \
            book_distance, cover_width, perspective_angle, bg_color, bg_alpha, st.session_state.spine_spread_angle, \
-           camera_height_ratio, final_size, border_percentage, st.session_state.multi_spine_mode, \
-           book_type, spine_shadow_mode
+           camera_height_ratio, final_size, border_percentage, book_type, spine_shadow_mode

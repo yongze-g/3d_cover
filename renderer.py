@@ -91,7 +91,7 @@ class BookCoverRenderer:
         
         # 角度转换为弧度
         spine_angle_rad = np.radians(perspective_angle + spine_spread_angle)
-        
+
         # 计算书脊变换参数
         spine_height = cover_height
         spine_width = spine_height / self.display_ppmm / original_spine_h * original_spine_w # in mm
@@ -263,52 +263,37 @@ class BookCoverRenderer:
                 cover_height, camera_height, camera_height_complement, bg_color_bgr
             )
         
-        # 创建最终图像
+        # 创建最终图像尺寸
         final_width = int(display_cover_width) + int(display_spine_width)
         final_height = max(int(cover_height), int(spine_height))
         
-        # 创建带背景色的画布
-        final_image = np.full((final_height, final_width, 3), bg_color_bgr, dtype=np.uint8)
+        # 将BGR格式转换回RGB格式
+        # 创建带背景色的RGB画布
+        rgb_image = np.full((final_height, final_width, 3), 
+                          (bg_color_bgr[2], bg_color_bgr[1], bg_color_bgr[0]), 
+                          dtype=np.uint8)
         
         # 放置封面和书脊
-        final_image[:int(cover_height), int(display_spine_width):] = cover_warped
-        final_image[:int(spine_height), :int(display_spine_width)] = spine_warped
+        rgb_image[:int(cover_height), int(display_spine_width):] = cv2.cvtColor(cover_warped, cv2.COLOR_BGR2RGB)
+        rgb_image[:int(spine_height), :int(display_spine_width)] = cv2.cvtColor(spine_warped, cv2.COLOR_BGR2RGB)
         
-        # 将BGR格式转换回RGB格式
-        rgb_image = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
-        
-        # 处理透明度
+        # 处理透明度 - 直接在主函数中实现，避免单独调用_add_transparency
         if bg_alpha < 255:
-            return self._add_transparency(rgb_image, cover_warped, spine_warped, 
-                                         display_spine_width, cover_height, spine_height, 
-                                         bg_color_bgr, bg_alpha)
+            # 创建初始透明度通道，值为背景透明度
+            alpha_channel = np.full((final_height, final_width), bg_alpha, dtype=np.uint8)
+             
+            # 标记封面区域为不透明
+            cover_mask = np.any(cover_warped != bg_color_bgr, axis=2)
+            alpha_channel[:int(cover_height), int(display_spine_width):][cover_mask] = 255
+            
+            # 标记书脊区域为不透明
+            spine_mask = np.any(spine_warped != bg_color_bgr, axis=2)
+            alpha_channel[:int(spine_height), :int(display_spine_width)][spine_mask] = 255
+            
+            # 合并RGB和Alpha通道
+            return cv2.merge([rgb_image, alpha_channel])
         
         return rgb_image
-    
-    def _add_transparency(self, rgb_image,          # RGB格式的基础图像
-                          cover_warped,             # 变换后的封面图像
-                          spine_warped,             # 变换后的书脊图像
-                          display_spine_width,      # 显示的书脊宽度（像素）
-                          cover_height,             # 封面高度（像素）
-                          spine_height,             # 书脊高度（像素）
-                          bg_color_bgr,             # 背景颜色（BGR格式）
-                          bg_alpha):                # 背景透明度（0-255）
-        """为图像添加透明度，仅背景透明，内容保持不透明"""
-        final_height, final_width = rgb_image.shape[:2]
-        
-        # 创建初始透明度通道
-        alpha_channel = np.full((final_height, final_width), bg_alpha, dtype=np.uint8)
-        
-        # 标记封面区域为不透明
-        cover_mask = np.any(cover_warped != bg_color_bgr, axis=2)
-        alpha_channel[:int(cover_height), int(display_spine_width):][cover_mask] = 255
-        
-        # 标记书脊区域为不透明
-        spine_mask = np.any(spine_warped != bg_color_bgr, axis=2)
-        alpha_channel[:int(spine_height), :int(display_spine_width)][spine_mask] = 255
-        
-        # 合并RGB和Alpha通道
-        return cv2.merge([rgb_image, alpha_channel])
     
     def overlay_shadow(self, original_image, shadow_image = "shadows/linear.png"):
         """

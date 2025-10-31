@@ -6,8 +6,8 @@ from renderer import BookCoverRenderer
 
 def process_images(
     cover_image,              # 上传的封面图片
-    spine_image,              # 上传的单个书脊图片（单书脊模式）
-    spine_images,             # 上传的多个书脊图片列表（多书脊模式）
+    spine_image,              # 保持向后兼容性，不使用
+    spine_images,             # 上传的多个书脊图片列表（默认使用多书脊模式）
     result_placeholder,       # 渲染结果占位符
     download_placeholder,     # 下载按钮占位符
     book_distance,            # 相机与书距离（mm）
@@ -19,7 +19,6 @@ def process_images(
     camera_height_ratio,      # 相机高度比例
     final_size,               # 最终图像尺寸
     border_percentage,        # 边框占最终图像的比例
-    multi_spine_mode,         # 是否启用多书脊模式
     book_type,                # 书型（平装/精装）
     spine_shadow_mode         # 书脊阴影模式（无/线性）
 ):
@@ -30,15 +29,9 @@ def process_images(
     if not cover_image:
         return
     
-    # 根据模式检查书脊图片
-    if multi_spine_mode:
-        # 多书脊模式下检查是否有书脊图片
-        if not spine_images:
-            return
-    else:
-        # 单书脊模式下检查单个书脊图片
-        if not spine_image:
-            return
+    # 默认使用多书脊模式，检查是否有书脊图片
+    if not spine_images:
+        return
     
     # 读取图片
     try:
@@ -49,10 +42,8 @@ def process_images(
         
         # 读取所有原始图片（用于预览显示，不应用阴影效果）
         original_spine_img_list = []
-        if multi_spine_mode and spine_images:
+        if spine_images:
             original_spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
-        elif not multi_spine_mode and spine_image:
-            original_spine_img = Image.open(spine_image).convert('RGB')
         
         # 显示上传的图片预览（使用原始图片，不应用阴影）
         st.subheader("上传的图片预览")
@@ -61,14 +52,9 @@ def process_images(
         display_images = []
         display_captions = []
         
-        if multi_spine_mode and spine_images:
-            # 多书脊模式：封面 + 所有原始书脊图片
-            display_images = [cover_img] + original_spine_img_list
-            display_captions = ["封面图片"] + [f"书脊图片 {i+1}" for i in range(len(original_spine_img_list))]
-        elif not multi_spine_mode and spine_image:
-            # 单书脊模式：封面 + 单个原始书脊图片
-            display_images = [cover_img, original_spine_img]
-            display_captions = ["封面图片", "书脊图片"]
+        # 默认使用多书脊模式：封面 + 所有原始书脊图片
+        display_images = [cover_img] + original_spine_img_list
+        display_captions = ["封面图片"] + [f"书脊图片 {i+1}" for i in range(len(original_spine_img_list))]
         
         # 使用Streamlit原生布局显示图片
         if display_images:
@@ -97,40 +83,35 @@ def process_images(
                         if new_width > 400:
                             st.caption(f"图片宽度: {new_width}px")
         
-        # 处理图片用于渲染（可能应用阴影效果）
-        if multi_spine_mode:
-            # 多书脊模式：读取所有书脊图片
-            spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
+        # 默认使用多书脊模式：读取所有书脊图片
+        spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
+        
+        # 如果选择线性书脊阴影模式，对每个书脊图片分别应用阴影效果
+        if spine_shadow_mode == "线性":
+            import cv2
+            import numpy as np
             
-            # 如果选择线性书脊阴影模式，对每个书脊图片分别应用阴影效果
-            if spine_shadow_mode == "线性":
-                import cv2
-                import numpy as np
+            # 加载阴影图片
+            shadow_path = 'shadows/linear.png'
+            try:
+                shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
                 
-                # 加载阴影图片
-                shadow_path = 'shadows/linear.png'
-                try:
-                    shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
+                # 对每个书脊图片应用阴影
+                for i in range(len(spine_img_list)):
+                    # 将PIL图像转换为OpenCV格式进行处理
+                    spine_array = np.array(spine_img_list[i])
+                    spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
                     
-                    # 对每个书脊图片应用阴影
-                    for i in range(len(spine_img_list)):
-                        # 将PIL图像转换为OpenCV格式进行处理
-                        spine_array = np.array(spine_img_list[i])
-                        spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
-                        
-                        # 应用阴影
-                        spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
-                        
-                        # 将处理后的图像转回PIL格式
-                        spine_img_list[i] = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
-                except Exception as shadow_error:
-                    st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
-            
-            # 使用merge_spines函数将多个书脊拼合为一个
-            spine_img = renderer.merge_spines(spine_img_list)
-        else:
-            # 单书脊模式：读取单个书脊图片
-            spine_img = Image.open(spine_image).convert('RGB')
+                    # 应用阴影
+                    spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
+                    
+                    # 将处理后的图像转回PIL格式
+                    spine_img_list[i] = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
+            except Exception as shadow_error:
+                st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
+        
+        # 使用merge_spines函数将多个书脊拼合为一个
+        spine_img = renderer.merge_spines(spine_img_list)
     except Exception as e:
         st.error(f"图片读取失败: {str(e)}")
         return
@@ -149,27 +130,7 @@ def process_images(
             rgb_bg = renderer.hex_to_rgb(bg_color)
             bgr_bg = rgb_bg[2], rgb_bg[1], rgb_bg[0]  # 转换为BGR格式
             
-            # 单书脊模式：如果选择线性书脊阴影模式，应用阴影效果到书脊图片上
-            if not multi_spine_mode and spine_shadow_mode == "线性":
-                import cv2
-                import numpy as np
-                
-                # 加载阴影图片
-                shadow_path = 'shadows/linear.png'
-                try:
-                    shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
-                    
-                    # 将PIL图像转换为OpenCV格式进行处理
-                    spine_array = np.array(spine_img)
-                    spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
-                    
-                    # 应用阴影
-                    spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
-                    
-                    # 将处理后的图像转回PIL格式
-                    spine_img = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
-                except Exception as shadow_error:
-                    st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
+            # 默认使用多书脊模式，阴影处理已在前面完成
             
             # 生成3D封面
             result_image = renderer.generate_3d_cover(
