@@ -155,7 +155,7 @@ class BookCoverRenderer:
         current_x = total_display_spine_width
         for spine, width in zip(warped_spines, display_spine_widths):
             # 计算垂直居中偏移
-            y_offset = int((cover_height - spine.shape[0]) // 2)
+            y_offset = int((cover_height - spine.shape[0]) * camera_height_complement / cover_height)
             # 从右到左放置书脊图像
             current_x -= width
             # 获取实际图像宽度，避免浮点数精度问题
