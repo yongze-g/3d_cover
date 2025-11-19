@@ -56,13 +56,15 @@ def setup_ui():
             final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
             border_percentage = st.slider("边框占比", 0.0, 0.2, 0.1, step=0.01)
 
-        with st.expander("未完成功能", expanded=False):
             # 添加书型选择（平装/精装）
-            book_type = st.radio(
-                "选择书型",
-                options=["平装", "精装"],
-                index=0,
-            )
+        book_type = st.radio(
+            "选择书型",
+            options=["平装", "精装"],
+            index=0,
+        )
+
+        # with st.expander("未完成功能", expanded=False):
+        # TODO 外缘靠色检测，添加描边
 
         cover_width = st.slider("开本宽度（mm）", 120, 200, 187, 
                                 help="成品图基于真实空间尺寸计算，开本宽度不同会导致3D效果的深度不同会导致透视程度不同") 
@@ -70,7 +72,7 @@ def setup_ui():
         # 书脊阴影模式选择
         spine_shadow_mode = st.radio(
             "书脊阴影模式",
-            options=["无", "线性"],
+            options=["无", "线性", "反射"],
             index=1
         )
         

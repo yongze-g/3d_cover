@@ -86,13 +86,19 @@ def process_images(
         # 默认使用多书脊模式：读取所有书脊图片
         spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
         
-        # 如果选择线性书脊阴影模式，对每个书脊图片分别应用阴影效果
-        if spine_shadow_mode == "线性":
+        # 定义阴影模式与文件路径的映射字典
+        shadow_mapping = {
+            "线性": 'shadows/linear.png',
+            "反射": 'shadows/reflect.png'
+        }
+        
+        # 如果选择了有效的阴影模式，对每个书脊图片分别应用阴影效果
+        if spine_shadow_mode in shadow_mapping:
             import cv2
             import numpy as np
             
-            # 加载阴影图片
-            shadow_path = 'shadows/linear.png'
+            # 根据阴影模式选择对应的阴影文件路径
+            shadow_path = shadow_mapping[spine_shadow_mode]
             try:
                 shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
                 
