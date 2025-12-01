@@ -8,6 +8,7 @@
 - renderer.py: 封装所有渲染相关功能
 - processor.py: 处理图像处理逻辑
 - app.py: 主入口文件，协调各模块
+- types.py: 定义数据类，封装参数
 """
 
 # 导入必要的模块
@@ -20,10 +21,10 @@ def main():
     主函数，协调整个应用程序的流程
     """
     # 设置用户界面并获取UI元素
-    ui_elements = setup_ui()
+    ui_params = setup_ui()
     
     # 处理图像并渲染3D封面
-    process_images(*ui_elements)
+    process_images(ui_params)
 
 
 if __name__ == "__main__":
