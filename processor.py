@@ -33,12 +33,12 @@ def process_images(
     if not spine_images:
         return
     
+    # 初始化渲染器
+    renderer = BookCoverRenderer()
+    
     # 读取图片
     try:
         cover_img = Image.open(cover_image).convert('RGB')
-        
-        # 初始化渲染器
-        renderer = BookCoverRenderer()
         
         # 读取所有原始图片（用于预览显示，不应用阴影效果）
         original_spine_img_list = []
@@ -85,44 +85,6 @@ def process_images(
         
         # 默认使用多书脊模式：读取所有书脊图片
         spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
-        
-        # 定义阴影模式与文件路径的映射字典
-        shadow_mapping = {
-            "线性": 'shadows/linear.png',
-            "反射": 'shadows/reflect.png'
-        }
-        
-        # 如果选择了有效的阴影模式，对每个书脊图片分别应用阴影效果
-        if spine_shadow_mode in shadow_mapping:
-            import cv2
-            import numpy as np
-            
-            # 根据阴影模式选择对应的阴影文件路径
-            shadow_path = shadow_mapping[spine_shadow_mode]
-            try:
-                shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
-                
-                # 对每个书脊图片应用阴影
-                for i in range(len(spine_img_list)):
-                    # 将PIL图像转换为OpenCV格式进行处理
-                    spine_array = np.array(spine_img_list[i])
-                    spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
-                    
-                    # 应用阴影
-                    spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
-                    
-                    # 将处理后的图像转回PIL格式
-                    spine_img_list[i] = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
-            except Exception as shadow_error:
-                st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
-        
-        # 根据书型决定是否拼合书脊
-        hardcover_spine_list = None
-        if book_type == "精装":
-            # 精装书模式下，保留原始书脊列表，后续直接传递给generate_3d_cover
-            hardcover_spine_list = spine_img_list.copy()
-        # 使用merge_spines函数将多个书脊拼合为一个（用于平装书或作为精装书的向后兼容）
-        spine_img = renderer.merge_spines(spine_img_list)
     except Exception as e:
         st.error(f"图片读取失败: {str(e)}")
         return
@@ -133,46 +95,20 @@ def process_images(
     # 生成3D封面
     with st.spinner("正在渲染3D封面..."):
         try:
-            # 初始化渲染器
-            renderer = BookCoverRenderer()
-            
-            # 计算背景色和透明度
+            # 计算背景透明度
             alpha_value = int(bg_alpha * 255 / 100)
-            rgb_bg = renderer.hex_to_rgb(bg_color)
-            bgr_bg = rgb_bg[2], rgb_bg[1], rgb_bg[0]  # 转换为BGR格式
             
-            # 默认使用多书脊模式，阴影处理已在前面完成
-            
-            # 生成3D封面
-            if book_type == "精装" and hardcover_spine_list is not None:
-                # 精装书模式下，传递书脊数组
-                result_image = renderer.generate_3d_cover(
-                    cover_img, spine_img,
-                    perspective_angle, book_distance, cover_width,
-                    bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
-                    spine_spread_angle=spine_spread_angle,
-                    camera_height_ratio=camera_height_ratio,
-                    book_type=book_type,
-                    spine_imgs=hardcover_spine_list
-                )
-            else:
-                # 平装书或精装书但未提供书脊列表时的默认行为
-                result_image = renderer.generate_3d_cover(
-                    cover_img, spine_img,
-                    perspective_angle, book_distance, cover_width,
-                    bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
-                    spine_spread_angle=spine_spread_angle,
-                    camera_height_ratio=camera_height_ratio,
-                    book_type=book_type
-                )
-
-            # 后处理
-            result_image = renderer.post_process_image(
-                result_image,
+            # 使用高级方法进行完整的3D封面渲染
+            result_image = renderer.render_3d_cover(
+                cover_img, spine_img_list,
+                perspective_angle, book_distance, cover_width,
+                bg_color, alpha_value,
+                spine_spread_angle=spine_spread_angle,
+                camera_height_ratio=camera_height_ratio,
                 final_size=final_size, 
-                border_percentage=border_percentage, 
-                bg_color_rgb=rgb_bg,
-                bg_alpha=alpha_value
+                border_percentage=border_percentage,
+                book_type=book_type,
+                spine_shadow_mode=spine_shadow_mode
             )
             
             # 显示结果
