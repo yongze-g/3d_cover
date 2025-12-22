@@ -38,7 +38,7 @@ def setup_ui():
             # 输出图像参数
             st.subheader("输出图像参数")
             final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
-            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.1, step=0.01)
+            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.05, step=0.01)
 
         # 书型选择
         book_type = st.radio(
@@ -85,15 +85,98 @@ def setup_ui():
 
     with col1:
         st.header("上传图片")
-        cover_image = st.file_uploader("上传封面图片", type=["png", "jpg", "jpeg"])
         
-        # 默认使用多书脊模式，支持上传多个文件
-        spine_images = st.file_uploader(
+        # 初始化状态
+        if 'example_mode' not in st.session_state:
+            st.session_state.example_mode = False
+        if 'saved_cover_image' not in st.session_state:
+            st.session_state.saved_cover_image = None
+        if 'saved_spine_images' not in st.session_state:
+            st.session_state.saved_spine_images = []
+        
+        # 正常上传功能（始终显示，用于保存用户选择）
+        # 但仅在非示例模式下可用
+        user_cover_image = st.file_uploader(
+            "上传封面图片", 
+            type=["png", "jpg", "jpeg"],
+            disabled=st.session_state.example_mode
+        )
+        
+        user_spine_images = st.file_uploader(
             "上传书脊图片（可上传多个）", 
             type=["png", "jpg", "jpeg"], 
             help="对于套书，可以从前到后依次上传书脊。书脊会缩放至统一高度处理", 
-            accept_multiple_files=True
+            accept_multiple_files=True,
+            disabled=st.session_state.example_mode
         )
+        
+        # 示例按钮功能
+        if st.session_state.example_mode:
+            if st.button("关闭示例图片以继续"):
+                st.session_state.example_mode = False
+                st.rerun()
+            
+            # 下载示例图片按钮
+            import os
+            import zipfile
+            from io import BytesIO
+            
+            # 准备示例图片路径
+            example_dir = "d:/AppData/GitHub/3d_cover/example"
+            example_files = ["cover.png", "spine1.png", "spine2.png"]
+            
+            # 创建内存中的zip文件
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                for file_name in example_files:
+                    file_path = os.path.join(example_dir, file_name)
+                    zip_file.write(file_path, file_name)
+            zip_buffer.seek(0)
+            
+            # 提供下载按钮
+            st.download_button(
+                label="下载示例图片",
+                data=zip_buffer,
+                file_name="example_images.zip",
+                mime="application/zip",
+                help="一键下载所有示例图片（封面和书脊）"
+            )
+        else:
+            if st.button("使用示例图片"):
+                # 保存用户当前上传的文件
+                st.session_state.saved_cover_image = user_cover_image
+                st.session_state.saved_spine_images = user_spine_images
+                st.session_state.example_mode = True
+                st.rerun()
+        
+        # 根据示例模式决定使用的图片
+        if st.session_state.example_mode:
+            # 使用示例图片
+            import os
+            from io import BytesIO
+            from PIL import Image
+            
+            # 获取示例图片路径
+            example_dir = "d:/AppData/GitHub/3d_cover/example"
+            cover_path = os.path.join(example_dir, "cover.png")
+            spine1_path = os.path.join(example_dir, "spine1.png")
+            spine2_path = os.path.join(example_dir, "spine2.png")
+            
+            # 读取示例图片并转换为BytesIO对象，模拟上传文件
+            def image_to_bytesio(image_path):
+                img = Image.open(image_path)
+                buffer = BytesIO()
+                img.save(buffer, format="PNG")
+                buffer.seek(0)
+                buffer.name = os.path.basename(image_path)
+                return buffer
+            
+            cover_image = image_to_bytesio(cover_path)
+            spine_images = [image_to_bytesio(spine1_path), image_to_bytesio(spine2_path)]
+        else:
+            # 恢复用户之前上传的文件，如果没有则使用当前上传的
+            cover_image = st.session_state.saved_cover_image or user_cover_image
+            spine_images = st.session_state.saved_spine_images or user_spine_images
 
     with col2:
         st.header("渲染结果")

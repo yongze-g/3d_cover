@@ -27,7 +27,7 @@ def process_images(ui_params: UIParams):
         original_spine_img_list = [Image.open(img).convert('RGB') for img in ui_params.spine_images]
         
         # 显示上传的图片预览
-        st.subheader("上传的图片预览")
+        st.subheader("已上传的图片")
         
         # 准备所有要显示的图片列表（封面 + 所有书脊）
         display_images = [cover_img] + original_spine_img_list
@@ -92,7 +92,7 @@ def process_images(ui_params: UIParams):
             
             # 显示结果
             with ui_params.result_placeholder:
-                st.image(result_image, caption="3D封面渲染结果", width='stretch')
+                st.image(result_image, width='stretch')
         
             # 准备下载
             buf = io.BytesIO()
