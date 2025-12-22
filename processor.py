@@ -2,182 +2,97 @@ from PIL import Image
 import io
 import streamlit as st
 from renderer import BookCoverRenderer
+from params import UIParams, RenderParams
 
 
-def process_images(
-    cover_image,              # 上传的封面图片
-    spine_image,              # 保持向后兼容性，不使用
-    spine_images,             # 上传的多个书脊图片列表（默认使用多书脊模式）
-    result_placeholder,       # 渲染结果占位符
-    download_placeholder,     # 下载按钮占位符
-    book_distance,            # 相机与书距离（mm）
-    cover_width,              # 开本宽度（mm）
-    perspective_angle,        # 旋转角度（度）
-    bg_color,                 # 背景颜色（十六进制）
-    bg_alpha,                 # 背景透明度
-    spine_spread_angle,       # 书脊额外展开角度
-    camera_height_ratio,      # 相机高度比例
-    final_size,               # 最终图像尺寸
-    border_percentage,        # 边框占最终图像的比例
-    book_type,                # 书型（平装/精装）
-    spine_shadow_mode         # 书脊阴影模式（无/线性）
-):
+def process_images(ui_params: UIParams):
     """
     处理上传的图片并生成3D封面
+    
+    参数:
+        ui_params: 封装所有UI参数的数据类实例
     """
     # 检查是否有封面图片和有效的书脊图片
-    if not cover_image:
+    if not ui_params.cover_image or not ui_params.spine_images:
         return
     
-    # 默认使用多书脊模式，检查是否有书脊图片
-    if not spine_images:
-        return
+    # 初始化渲染器
+    renderer = BookCoverRenderer()
     
     # 读取图片
     try:
-        cover_img = Image.open(cover_image).convert('RGB')
-        
-        # 初始化渲染器
-        renderer = BookCoverRenderer()
+        cover_img = Image.open(ui_params.cover_image).convert('RGB')
         
         # 读取所有原始图片（用于预览显示，不应用阴影效果）
-        original_spine_img_list = []
-        if spine_images:
-            original_spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
+        original_spine_img_list = [Image.open(img).convert('RGB') for img in ui_params.spine_images]
         
-        # 显示上传的图片预览（使用原始图片，不应用阴影）
-        st.subheader("上传的图片预览")
+        # 显示上传的图片预览
+        st.subheader("已上传的图片")
         
         # 准备所有要显示的图片列表（封面 + 所有书脊）
-        display_images = []
-        display_captions = []
-        
-        # 默认使用多书脊模式：封面 + 所有原始书脊图片
         display_images = [cover_img] + original_spine_img_list
         display_captions = ["封面图片"] + [f"书脊图片 {i+1}" for i in range(len(original_spine_img_list))]
         
-        # 使用Streamlit原生布局显示图片
+        # 使用Streamlit原生布局显示图片（从右向左）
         if display_images:
-            # 创建一个水平容器
-            horizontal_container = st.container()
-            
-            # 在水平容器中创建一个行
-            with horizontal_container:
-                # 从右向左显示：先反转图片列表
+            with st.container():
                 reversed_images = list(reversed(display_images))
                 reversed_captions = list(reversed(display_captions))
                 
-                # 使用水平布局显示图片
                 cols = st.columns(len(reversed_images), gap="small")
                 
-                # 为每个图片分配一个列
                 for i, (img, caption) in enumerate(zip(reversed_images, reversed_captions)):
                     # 计算显示宽度，保持原始宽高比，高度为300px
-                    width_percent = 300 / float(img.size[1])
-                    new_width = int((float(img.size[0]) * float(width_percent)))
+                    new_width = int(img.size[0] * (300 / img.size[1]))
                     
-                    # 在对应的列中直接显示原图，并设置显示宽度
                     with cols[i]:
                         st.image(img, caption=caption, width=new_width, clamp=True)
-                        # 如果图片特别宽，可以添加横向滚动条
                         if new_width > 400:
                             st.caption(f"图片宽度: {new_width}px")
         
-        # 默认使用多书脊模式：读取所有书脊图片
-        spine_img_list = [Image.open(img).convert('RGB') for img in spine_images]
-        
-        # 定义阴影模式与文件路径的映射字典
-        shadow_mapping = {
-            "线性": 'shadows/linear.png',
-            "反射": 'shadows/reflect.png'
-        }
-        
-        # 如果选择了有效的阴影模式，对每个书脊图片分别应用阴影效果
-        if spine_shadow_mode in shadow_mapping:
-            import cv2
-            import numpy as np
-            
-            # 根据阴影模式选择对应的阴影文件路径
-            shadow_path = shadow_mapping[spine_shadow_mode]
-            try:
-                shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
-                
-                # 对每个书脊图片应用阴影
-                for i in range(len(spine_img_list)):
-                    # 将PIL图像转换为OpenCV格式进行处理
-                    spine_array = np.array(spine_img_list[i])
-                    spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
-                    
-                    # 应用阴影
-                    spine_with_shadow = renderer.overlay_shadow(spine_bgr, shadow_img)
-                    
-                    # 将处理后的图像转回PIL格式
-                    spine_img_list[i] = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
-            except Exception as shadow_error:
-                st.warning(f"无法加载或应用阴影：{str(shadow_error)}")
-        
-        # 根据书型决定是否拼合书脊
-        hardcover_spine_list = None
-        if book_type == "精装":
-            # 精装书模式下，保留原始书脊列表，后续直接传递给generate_3d_cover
-            hardcover_spine_list = spine_img_list.copy()
-        # 使用merge_spines函数将多个书脊拼合为一个（用于平装书或作为精装书的向后兼容）
-        spine_img = renderer.merge_spines(spine_img_list)
+        # 读取所有书脊图片用于渲染
+        spine_img_list = original_spine_img_list.copy()
     except Exception as e:
         st.error(f"图片读取失败: {str(e)}")
         return
     
-    # 统一多书脊和单书脊的预览形式 - 预览逻辑已移至图片读取后立即执行
-    # 这样确保预览显示的是原始图片，不会受到阴影处理的影响
-    
     # 生成3D封面
     with st.spinner("正在渲染3D封面..."):
         try:
-            # 初始化渲染器
-            renderer = BookCoverRenderer()
+            # 计算背景透明度
+            alpha_value = int(ui_params.bg_alpha * 255 / 100)
             
-            # 计算背景色和透明度
-            alpha_value = int(bg_alpha * 255 / 100)
-            rgb_bg = renderer.hex_to_rgb(bg_color)
-            bgr_bg = rgb_bg[2], rgb_bg[1], rgb_bg[0]  # 转换为BGR格式
+            # 准备渲染参数
+            render_params = RenderParams(
+                perspective_angle=ui_params.perspective_angle,
+                book_distance=ui_params.book_distance,
+                cover_width=ui_params.cover_width,
+                bg_color=ui_params.bg_color,
+                bg_alpha=alpha_value,
+                spine_spread_angle=ui_params.spine_spread_angle,
+                camera_height_ratio=ui_params.camera_height_ratio,
+                final_size=ui_params.final_size,
+                border_percentage=ui_params.border_percentage,
+                book_type=ui_params.book_type,
+                spine_shadow_mode=ui_params.spine_shadow_mode
+            )
             
-            # 默认使用多书脊模式，阴影处理已在前面完成
-            
-            # 生成3D封面
-            if book_type == "精装" and hardcover_spine_list is not None:
-                # 精装书模式下，传递书脊数组
-                result_image = renderer.generate_3d_cover(
-                    cover_img, spine_img,
-                    perspective_angle, book_distance, cover_width,
-                    bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
-                    spine_spread_angle=spine_spread_angle,
-                    camera_height_ratio=camera_height_ratio,
-                    book_type=book_type,
-                    spine_imgs=hardcover_spine_list
-                )
-            else:
-                # 平装书或精装书但未提供书脊列表时的默认行为
-                result_image = renderer.generate_3d_cover(
-                    cover_img, spine_img,
-                    perspective_angle, book_distance, cover_width,
-                    bg_color_bgr=bgr_bg, bg_alpha=alpha_value,
-                    spine_spread_angle=spine_spread_angle,
-                    camera_height_ratio=camera_height_ratio,
-                    book_type=book_type
-                )
-
-            # 后处理
-            result_image = renderer.post_process_image(
-                result_image,
-                final_size=final_size, 
-                border_percentage=border_percentage, 
-                bg_color_rgb=rgb_bg,
-                bg_alpha=alpha_value
+            # 使用高级方法进行完整的3D封面渲染
+            result_image = renderer.render_3d_cover(
+                cover_img, spine_img_list,
+                render_params.perspective_angle, render_params.book_distance, render_params.cover_width,
+                render_params.bg_color, render_params.bg_alpha,
+                spine_spread_angle=render_params.spine_spread_angle,
+                camera_height_ratio=render_params.camera_height_ratio,
+                final_size=render_params.final_size, 
+                border_percentage=render_params.border_percentage,
+                book_type=render_params.book_type,
+                spine_shadow_mode=render_params.spine_shadow_mode
             )
             
             # 显示结果
-            with result_placeholder:
-                st.image(result_image, caption="3D封面渲染结果", width='stretch')
+            with ui_params.result_placeholder:
+                st.image(result_image, width='stretch')
         
             # 准备下载
             buf = io.BytesIO()
@@ -185,7 +100,7 @@ def process_images(
             result_pil.save(buf, format="PNG")
             byte_im = buf.getvalue()
             
-            with download_placeholder:
+            with ui_params.download_placeholder:
                 st.download_button(
                     label="下载立体封",
                     data=byte_im,
