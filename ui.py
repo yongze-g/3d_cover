@@ -122,7 +122,7 @@ def setup_ui():
             from io import BytesIO
             
             # 准备示例图片路径
-            example_dir = "d:/AppData/GitHub/3d_cover/example"
+            example_dir = "example"
             example_files = ["cover.png", "spine1.png", "spine2.png"]
             
             # 创建内存中的zip文件
@@ -157,7 +157,7 @@ def setup_ui():
             from PIL import Image
             
             # 获取示例图片路径
-            example_dir = "d:/AppData/GitHub/3d_cover/example"
+            example_dir = "example"
             cover_path = os.path.join(example_dir, "cover.png")
             spine1_path = os.path.join(example_dir, "spine1.png")
             spine2_path = os.path.join(example_dir, "spine2.png")
