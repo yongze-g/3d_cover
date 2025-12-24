@@ -54,6 +54,8 @@ pip install -r requirements.txt
 
 ## 使用方法
 
+### 方法1: Web界面（推荐）
+
 1. 激活环境（如果尚未激活）
    ```bash
    # Conda环境
@@ -71,6 +73,43 @@ pip install -r requirements.txt
 3. 在浏览器中打开生成的URL（通常是 http://localhost:8501）
 
 4. 按照界面提示上传图片并调整参数
+
+### 方法2: 命令行接口
+
+直接通过命令行生成3D封面，无需启动Web界面。
+
+```bash
+python cli.py --cover <封面图片路径> --spine <书脊图片路径>... --output <输出图片路径> [可选参数]
+```
+
+#### 必需参数
+- `--cover, -c`: 封面图片路径
+- `--spine, -s`: 书脊图片路径（可以指定多个）
+- `--output, -o`: 输出图片路径
+
+#### 可选参数
+- `--perspective, -p`: 旋转角度（度），默认：35
+- `--distance, -d`: 相机与书距离（mm），默认：800
+- `--width, -w`: 开本宽度（mm），默认：187
+- `--bg-color, -b`: 背景颜色（十六进制），默认：#ffffff
+- `--bg-alpha, -a`: 背景透明度（0-100），默认：100
+- `--spine-spread, -ss`: 书脊额外展开角度（度），默认：0
+- `--camera-height, -ch`: 相机高度比例（0-1），默认：0.5
+- `--final-size, -fs`: 最终图像尺寸（像素），默认：1200
+- `--border, -bd`: 边框占比（0-0.2），默认：0.1
+- `--book-type, -bt`: 书型（平装/精装），默认：平装
+- `--shadow-mode, -sm`: 书脊阴影模式（无/线性/反射），默认：线性
+
+#### 示例
+```bash
+# 使用默认参数生成3D封面
+python cli.py --cover cover.jpg --spine spine1.jpg --output result.png
+
+# 使用自定义参数生成3D封面
+python cli.py --cover cover.jpg --spine spine1.jpg spine2.jpg --output result.png \
+  --perspective 45 --distance 1000 --width 200 --bg-color #f0f0f0 --bg-alpha 50 \
+  --book-type 精装 --shadow-mode 反射
+```
 
 ## 参数说明
 
