@@ -10,6 +10,15 @@ from cover_spine_generator import find_symmetry_positions
 def main():
     st.title("📄 PDF封面和书脊提取工具")
     
+    # 侧边栏参数设置
+    center_skip_width = st.sidebar.slider(
+        "中间跳过区域宽度（像素）",
+        min_value=1,
+        max_value=20,
+        value=5,
+        help="横向扫描时跳过图片中间区域的宽度，用于避开中间的血线干扰"
+    )
+    
     # 上传PDF文件
     uploaded_file = st.file_uploader("仅接受带出血线的PDF文件，不带血线则无法正确识别", type="pdf")
     
@@ -27,7 +36,11 @@ def main():
             img_path = pdf_to_image(pdf_path, temp_dir)
             
             # 调用find_symmetry_positions获取可视化图片
-            symmetry_positions, visualize_path, _ = find_symmetry_positions(img_path, temp_dir, directions=["horizontal", "vertical"])
+            symmetry_positions, visualize_path, _ = find_symmetry_positions(
+                img_path, temp_dir, 
+                directions=["horizontal", "vertical"], 
+                center_skip_width=center_skip_width
+            )
             
             # 调用cut_pdf生成封面和书脊
             cover_path, spine_path = cut_pdf(pdf_path, temp_dir)

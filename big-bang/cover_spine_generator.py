@@ -214,7 +214,7 @@ def split_image_by_symmetry(img_path, symmetry_positions, output_dir):
     
     return selected_regions
 
-def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", "vertical"]):
+def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", "vertical"], center_skip_width=5):
     """
     寻找对称的非白色像素位置
     
@@ -263,14 +263,22 @@ def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", 
                 top_positions = []
                 bottom_positions = []
                 
-                # 扫描上行
+                # 计算需要跳过的中心区域，中间的血线往往很长，干扰检测
+                center_start = width // 2 - center_skip_width // 2
+                center_end = width // 2 + center_skip_width // 2
+                
+                # 扫描上行，跳过最中间的5像素
                 for x in range(width):
+                    if center_start <= x <= center_end:
+                        continue
                     pixel = img_rgb.getpixel((x, top_row))
                     if not is_white_pixel(pixel):
                         top_positions.append(x)
                 
-                # 扫描下行
+                # 扫描下行，跳过最中间的5像素
                 for x in range(width):
+                    if center_start <= x <= center_end:
+                        continue
                     pixel = img_rgb.getpixel((x, bottom_row))
                     if not is_white_pixel(pixel):
                         bottom_positions.append(x)
@@ -292,10 +300,11 @@ def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", 
                     # 进一步处理有效位置
                     processed_positions = sorted_intersection.copy()
                     
-                    # 1. 如果是奇数个位置，舍弃最中间的
-                    if len(processed_positions) % 2 != 0:
-                        mid_index = len(processed_positions) // 2
-                        processed_positions.pop(mid_index)
+                    # 跳过中间，理论上不会产生奇数个位置
+                    # # 1. 如果是奇数个位置，舍弃最中间的
+                    # if len(processed_positions) % 2 != 0:
+                    #     mid_index = len(processed_positions) // 2
+                    #     processed_positions.pop(mid_index)
                     
                     # 2. 检查并替换同一侧距离显著小的相邻位置
                     if len(processed_positions) >= 2:
