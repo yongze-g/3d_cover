@@ -183,10 +183,10 @@ def split_image_by_symmetry(img_path, symmetry_positions, output_dir):
     
     # 只保留中间和其右侧的区域
     selected_regions = []
-    if middle_idx < total_regions:
-        selected_regions.append(all_regions[middle_idx])
     if right_of_middle_idx < total_regions:
         selected_regions.append(all_regions[right_of_middle_idx])
+    if middle_idx < total_regions:
+        selected_regions.append(all_regions[middle_idx])
     
     # 分配新的ID并保存图片
     for i, region in enumerate(selected_regions):
