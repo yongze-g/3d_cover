@@ -8,7 +8,7 @@ from pdf_to_images import cut_pdf, pdf_to_image
 from cover_spine_generator import find_symmetry_positions
 
 def main():
-    st.title("PDF封面和书脊提取（测试）")
+    st.title("📄 PDF封面和书脊提取工具")
     
     # 上传PDF文件
     uploaded_file = st.file_uploader("仅接受带出血线的PDF文件，不带血线则无法正确识别", type="pdf")

@@ -26,6 +26,7 @@ def setup_ui():
 
     # 侧边栏 - 参数调整
     with st.sidebar:
+        
         st.header("参数设置")
         
         # 使用expander实现折叠设置
@@ -168,7 +169,7 @@ def setup_ui():
                 buffer = BytesIO()
                 img.save(buffer, format="PNG")
                 buffer.seek(0)
-                buffer.name = os.path.basename(image_path)
+                buffer.name = os.basename(image_path)
                 return buffer
             
             cover_image = image_to_bytesio(cover_path)
@@ -177,6 +178,11 @@ def setup_ui():
             # 恢复用户之前上传的文件，如果没有则使用当前上传的
             cover_image = st.session_state.saved_cover_image or user_cover_image
             spine_images = st.session_state.saved_spine_images or user_spine_images
+
+        # 使用查询参数切换到big-bang功能
+        if st.button("从PDF提取封面和书脊→", type="secondary"):
+            st.query_params["page"] = "big-bang"
+            st.rerun()
 
     with col2:
         st.header("渲染结果")
