@@ -21,7 +21,7 @@ def setup_ui():
     )
 
     # 页面标题和说明
-    st.title("📚 立体封渲染器")
+    st.title("立体封渲染器")
     st.write("上传图书封面和书脊图片，调整参数生成专业的立体图书效果")
 
     # 侧边栏 - 参数调整
@@ -169,7 +169,8 @@ def setup_ui():
                 buffer = BytesIO()
                 img.save(buffer, format="PNG")
                 buffer.seek(0)
-                buffer.name = os.basename(image_path)
+                # 手动提取文件名，避免使用os.basename
+                buffer.name = image_path.split(os.path.sep)[-1] if os.path.sep in image_path else image_path
                 return buffer
             
             cover_image = image_to_bytesio(cover_path)

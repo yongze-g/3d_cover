@@ -7,8 +7,8 @@ import zipfile
 from pdf_to_images import cut_pdf, pdf_to_image
 from cover_spine_generator import find_symmetry_positions
 
-def main():
-    st.title("📄 PDF封面和书脊提取工具")
+def run_big_bang_app():
+    st.title("PDF封面和书脊提取工具（测试）")
     
     # 侧边栏参数设置
     center_skip_width = st.sidebar.slider(
@@ -21,6 +21,8 @@ def main():
     
     # 上传PDF文件
     uploaded_file = st.file_uploader("仅接受带出血线的PDF文件，不带血线则无法正确识别", type="pdf")
+
+    st.write("血线识别算法持续优化中，若出现识别错误，可以在WPS中临时删除错误识别的血线，或用纯白色色块临时遮盖。")
     
     if uploaded_file is not None:
         try:
@@ -118,6 +120,9 @@ def main():
                     os.rmdir(temp_dir)
                 except:
                     pass
+
+def main():
+    run_big_bang_app()
 
 if __name__ == "__main__":
     main()

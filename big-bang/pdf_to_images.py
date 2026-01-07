@@ -29,8 +29,9 @@ def pdf_to_image(pdf_path, output_dir="."):
     # 获取第一页
     page = doc[0]
     
-    # 按原尺寸转换为图片
-    pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+    # 按原尺寸转换为图片，使用2倍缩放以获得更清晰的图像
+    scale = 2
+    pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale))
     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
     
     # 提取PDF文件名（不含扩展名）
