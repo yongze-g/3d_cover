@@ -71,6 +71,8 @@ class BookCoverRenderer:
         
         # 创建空白输出图像
         processed_image = np.zeros_like(spine_warped)
+        # 创建一个掩码来跟踪哪些像素已经被填充
+        filled_mask = np.zeros((h, w), dtype=bool)
         
         # 向量化计算偏移量，避免双重循环
         # 创建x坐标数组 (0到w-1)
@@ -115,9 +117,12 @@ class BookCoverRenderer:
             
             # 应用偏移
             processed_image[y[valid_mask], x_col] = spine_warped[new_y[valid_mask], x_col]
+            # 标记已填充的像素
+            filled_mask[y[valid_mask], x_col] = True
             
             # 填充空白区域
-            empty_mask = ~np.any(processed_image[:, x_col], axis=1)
+            # 使用掩码来判断哪些像素未被填充
+            empty_mask = ~filled_mask[:, x_col]
             processed_image[empty_mask, x_col] = bg_color_bgr
 
         return processed_image
