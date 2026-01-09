@@ -29,18 +29,6 @@ def setup_ui():
         
         st.header("参数设置")
         
-        # 使用expander实现折叠设置
-        with st.expander("高级设置", expanded=False):
-            # 透视参数
-            st.subheader("透视参数")
-            book_distance = st.slider("相机与书距离（mm）", 300, 1000, 800)
-            camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
-            
-            # 输出图像参数
-            st.subheader("输出图像参数")
-            final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
-            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.05, step=0.01)
-
         # 书型选择
         book_type = st.radio(
             "选择书型",
@@ -77,9 +65,22 @@ def setup_ui():
             key="spine_spread_angle"
         )
         
-        # 渲染参数
-        bg_color = st.color_picker("背景颜色", "#ffffff")
-        bg_alpha = st.slider("背景不透明度", 0, 100, 100)
+        # 使用expander实现折叠设置
+        with st.expander("高级设置", expanded=False):
+            # 透视参数
+            st.subheader("透视参数")
+            book_distance = st.slider("相机与书距离（mm）", 300, 1000, 800)
+            camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
+            
+            # 输出图像参数
+            st.subheader("输出图像参数")
+            final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
+            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.05, step=0.01)
+            
+            # 渲染参数
+            st.subheader("渲染参数")
+            bg_color = st.color_picker("背景颜色", "#ffffff")
+            bg_alpha = st.slider("背景不透明度", 0, 100, 100)
 
     # 主内容区域 - 文件上传和渲染
     col1, col2 = st.columns(2)
