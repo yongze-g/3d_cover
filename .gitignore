@@ -4,3 +4,5 @@ __pycache__/
 big-bang/analysis_output/
 big-bang/*/
 *.DS_Store
+.devcontainer/
+.pytest_cache/
