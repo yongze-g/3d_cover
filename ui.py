@@ -37,7 +37,7 @@ def setup_ui():
         )
 
         cover_width = st.slider("开本宽度（mm）", 120, 200, 187, 
-                                help="成品图基于真实空间尺寸计算，开本宽度不同会导致3D效果的深度不同会导致透视程度不同") 
+                                help="成品图基于真实空间尺寸计算，开本宽度不同会导致透视关系不同，请选择该书真实的开本宽度") 
     
         # 书脊阴影模式选择
         spine_shadow_mode = st.radio(
@@ -61,8 +61,18 @@ def setup_ui():
             0, 
             max_spine_spread_angle, 
             st.session_state.spine_spread_angle, 
-            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算",
+            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算。注意：额外展开书脊会使得书脊的角度不符合真实透视关系",
             key="spine_spread_angle"
+        )
+        
+        # 书脊加宽比例
+        spine_width_ratio = st.slider(
+            "书脊拉伸", 
+            1.0, 
+            2.0, 
+            1.0, 
+            step=0.05,
+            help="如果书脊的视觉展示效果过薄，可在此按比例拉宽书脊，默认为1（即不拉伸）。注意：拉伸会使得书脊的宽度不符合真实透视关系"
         )
         
         # 使用expander实现折叠设置
@@ -207,5 +217,6 @@ def setup_ui():
         final_size=final_size,
         border_percentage=border_percentage,
         book_type=book_type,
-        spine_shadow_mode=spine_shadow_mode
+        spine_shadow_mode=spine_shadow_mode,
+        spine_width_ratio=spine_width_ratio
     )

@@ -23,6 +23,7 @@ class UIParams:
     border_percentage: float = 0.1
     book_type: str = "平装"
     spine_shadow_mode: str = "线性"
+    spine_width_ratio: float = 1.0
 
 
 @dataclass
@@ -41,3 +42,4 @@ class RenderParams:
     border_percentage: float
     book_type: str
     spine_shadow_mode: str
+    spine_width_ratio: float

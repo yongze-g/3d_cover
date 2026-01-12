@@ -52,6 +52,16 @@ def process_images(ui_params: UIParams):
         
         # 读取所有书脊图片用于渲染
         spine_img_list = original_spine_img_list.copy()
+        
+        # 应用书脊加宽比例（在所有其他处理之前执行）
+        if ui_params.spine_width_ratio != 1.0:
+            for i, spine_img in enumerate(spine_img_list):
+                # 计算新的宽度，保持高度不变
+                new_width = int(spine_img.width * ui_params.spine_width_ratio)
+                new_height = spine_img.height
+                
+                # 使用Pillow的resize方法调整图片大小，使用高质量的重采样滤镜
+                spine_img_list[i] = spine_img.resize((new_width, new_height), Image.LANCZOS)
     except Exception as e:
         st.error(f"图片读取失败: {str(e)}")
         return
@@ -74,7 +84,8 @@ def process_images(ui_params: UIParams):
                 final_size=ui_params.final_size,
                 border_percentage=ui_params.border_percentage,
                 book_type=ui_params.book_type,
-                spine_shadow_mode=ui_params.spine_shadow_mode
+                spine_shadow_mode=ui_params.spine_shadow_mode,
+                spine_width_ratio=ui_params.spine_width_ratio
             )
             
             # 使用高级方法进行完整的3D封面渲染
