@@ -25,6 +25,7 @@ class BookCoverRenderer:
 
         返回:
             spine_warped: 变换后的书脊图像
+            spine_mask: 书脊内容掩码（True表示内容，False表示背景填充）
             display_spine_width: 变换后的书脊宽度（像素）
             spine_height: 变换后的书脊高度（像素）
         """
@@ -47,14 +48,25 @@ class BookCoverRenderer:
         spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
                         [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
         spine_matrix = cv2.getPerspectiveTransform(spine_points, spine_transformed)
+        
+        # 变换书脊图像
         spine_warped = cv2.warpPerspective(
             spine_img, spine_matrix, (int(display_spine_width), int(spine_height)),
             borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
         )
         
-        return spine_warped, display_spine_width, spine_height
+        # 创建原始内容掩码
+        original_mask = np.ones((original_spine_h, original_spine_w), dtype=bool)
+        
+        # 对掩码进行同样的透视变换
+        spine_mask = cv2.warpPerspective(
+            original_mask.astype(np.uint8), spine_matrix, (int(display_spine_width), int(spine_height)),
+            borderMode=cv2.BORDER_CONSTANT, borderValue=0
+        ).astype(bool)
+        
+        return spine_warped, spine_mask, display_spine_width, spine_height
     
-    def _process_spine_pixels_column(self, spine_warped, spine_offset_y_top, 
+    def _process_spine_pixels_column(self, spine_warped, spine_mask, spine_offset_y_top, 
                                     spine_offset_y_bottom, display_spine_width, bg_color_bgr):
         """
         对书脊图像进行逐列像素处理，实现四分之一椭圆缩放效果
@@ -64,15 +76,15 @@ class BookCoverRenderer:
 
         返回:
             processed_image: 处理后的图像
+            processed_mask: 处理后的掩码
         """
         # 获取图像尺寸
         h, w = spine_warped.shape[:2]
         w = int(display_spine_width)
         
-        # 创建空白输出图像
+        # 创建空白输出图像和掩码
         processed_image = np.zeros_like(spine_warped)
-        # 创建一个掩码来跟踪哪些像素已经被填充
-        filled_mask = np.zeros((h, w), dtype=bool)
+        processed_mask = np.zeros((h, w), dtype=bool)
         
         # 向量化计算偏移量，避免双重循环
         # 创建x坐标数组 (0到w-1)
@@ -115,17 +127,22 @@ class BookCoverRenderer:
             # 确保新坐标在有效范围内
             valid_mask = (new_y >= 0) & (new_y < h)
             
-            # 应用偏移
+            # 应用偏移到图像
             processed_image[y[valid_mask], x_col] = spine_warped[new_y[valid_mask], x_col]
-            # 标记已填充的像素
-            filled_mask[y[valid_mask], x_col] = True
+            
+            # 应用偏移到掩码
+            if spine_mask is not None:
+                processed_mask[y[valid_mask], x_col] = spine_mask[new_y[valid_mask], x_col]
+            else:
+                # 如果没有提供掩码，假设所有有效像素都是内容
+                processed_mask[y[valid_mask], x_col] = True
             
             # 填充空白区域
             # 使用掩码来判断哪些像素未被填充
-            empty_mask = ~filled_mask[:, x_col]
+            empty_mask = ~processed_mask[:, x_col]
             processed_image[empty_mask, x_col] = bg_color_bgr
 
-        return processed_image
+        return processed_image, processed_mask
     
     def _transform_spine_hardcover(self, spine_imgs, cover_height, spine_angle_rad, 
                                   camera_height, camera_height_complement, book_distance, bg_color_bgr):
@@ -136,12 +153,14 @@ class BookCoverRenderer:
 
         返回:
             spine_warped: 变换后拼合的书脊图像
+            spine_mask: 拼合后的书脊内容掩码（True表示内容，False表示背景填充）
             total_display_spine_width: 变换后总书脊宽度（像素）
             spine_height: 变换后的书脊高度（像素）
         """
 
         # 处理每个书脊图像
         warped_spines = []
+        warped_spine_masks = []  # 新增：存储每个书脊的掩码
         display_spine_widths = []
 
         last_spine_height = cover_height
@@ -165,9 +184,12 @@ class BookCoverRenderer:
                 interpolation=cv2.INTER_LANCZOS4
             )
             
+            # 创建原始内容掩码
+            original_mask = np.ones((int(pivot_height), int(pivot_width_px)), dtype=bool)
+            
             # 应用逐列像素处理函数，传入背景颜色用于空白填充
-            spine_warped = self._process_spine_pixels_column(
-                spine_warped, pivot_offset_y_top, pivot_offset_y_bottom, pivot_width_px, bg_color_bgr
+            spine_warped, spine_mask = self._process_spine_pixels_column(
+                spine_warped, original_mask, pivot_offset_y_top, pivot_offset_y_bottom, pivot_width_px, bg_color_bgr
             )
 
             display_height = int(last_spine_height)
@@ -177,26 +199,35 @@ class BookCoverRenderer:
                  spine_warped, (display_width, display_height),
                  interpolation=cv2.INTER_LANCZOS4
              )
+             
+            # 调整掩码尺寸
+            spine_mask = cv2.resize(
+                spine_mask.astype(np.uint8), (display_width, display_height),
+                interpolation=cv2.INTER_NEAREST  # 使用最近邻插值保持掩码的布尔值
+            ).astype(bool)
 
             last_spine_height = display_height - pivot_offset_y_top - pivot_offset_y_bottom
             
             warped_spines.append(spine_warped)
+            warped_spine_masks.append(spine_mask)
             # 使用实际spine_warped的宽度，而不是计算的宽度，避免浮点数精度问题
             display_spine_widths.append(display_width)
         
         # 计算总宽度
         total_display_spine_width = sum(display_spine_widths)
         
-        # 将原来的3通道BGR格式改为4通道RGBA格式
+        # 创建合并后的图像和掩码
         merged_spine = np.zeros((int(cover_height), int(total_display_spine_width), 4), dtype=np.uint8)
+        merged_mask = np.zeros((int(cover_height), int(total_display_spine_width)), dtype=bool)
+        
         # 设置背景颜色（直接使用BGR格式，因为merged_spine在后续操作中会保持BGR通道顺序）
         merged_spine[:, :, 0:3] = bg_color_bgr
         # 设置透明度为完全不透明
         merged_spine[:, :, 3] = 255
         
-        # 从右到左拼合所有变换后的书脊图像，确保垂直对齐
+        # 从右到左拼合所有变换后的书脊图像和掩码，确保垂直对齐
         current_x = total_display_spine_width
-        for spine, width in zip(warped_spines, display_spine_widths):
+        for spine, spine_mask, width in zip(warped_spines, warped_spine_masks, display_spine_widths):
             # 计算垂直居中偏移
             y_offset = int((cover_height - spine.shape[0]) * camera_height_complement / cover_height)
             # 从右到左放置书脊图像
@@ -211,8 +242,10 @@ class BookCoverRenderer:
             if end_x > start_x:
                 # 确保所有切片索引都是整数，并且只操作RGB通道（前3个通道）
                 merged_spine[y_offset:y_offset+spine.shape[0], start_x:end_x, :3] = spine[:, :end_x-start_x]
+                # 更新掩码
+                merged_mask[y_offset:y_offset+spine_mask.shape[0], start_x:end_x] = spine_mask[:, :end_x-start_x]
         
-        return merged_spine, total_display_spine_width, cover_height
+        return merged_spine, merged_mask, total_display_spine_width, cover_height
     
     def _overlay_shadow(self, original_image, shadow_image):
         """
@@ -411,6 +444,10 @@ class BookCoverRenderer:
                         cover_height, offset_y_top, offset_y_bottom, bg_color_bgr):
         """
         对封面图像进行透视变换
+        
+        返回:
+            cover_warped: 变换后的封面图像
+            cover_mask: 封面内容掩码（True表示内容，False表示背景填充）
         """
         # 创建封面透视变换
         cover_points = np.float32([[0, 0], [original_cover_w, 0], 
@@ -418,12 +455,23 @@ class BookCoverRenderer:
         cover_transformed = np.float32([[0, 0], [display_cover_width, offset_y_top], 
                         [display_cover_width, cover_height - offset_y_bottom], [0, cover_height]])
         cover_matrix = cv2.getPerspectiveTransform(cover_points, cover_transformed)
+        
+        # 变换封面图像
         cover_warped = cv2.warpPerspective(
             cover, cover_matrix, (int(display_cover_width), int(cover_height)),
             borderMode=cv2.BORDER_CONSTANT, borderValue=bg_color_bgr
         )
         
-        return cover_warped
+        # 创建原始内容掩码
+        original_mask = np.ones((original_cover_h, original_cover_w), dtype=bool)
+        
+        # 对掩码进行同样的透视变换
+        cover_mask = cv2.warpPerspective(
+            original_mask.astype(np.uint8), cover_matrix, (int(display_cover_width), int(cover_height)),
+            borderMode=cv2.BORDER_CONSTANT, borderValue=0
+        ).astype(bool)
+        
+        return cover_warped, cover_mask
     
     def _generate_3d_cover(self, cover_img, spine_img, hardcover_spines, perspective_angle, 
                           book_distance, cover_width, bg_color, bg_alpha, spine_spread_angle, 
@@ -451,7 +499,7 @@ class BookCoverRenderer:
         )
         
         # 变换封面
-        cover_warped = self._transform_cover(
+        cover_warped, cover_mask = self._transform_cover(
             cover, cover.shape[1], cover.shape[0], transform_params["display_cover_width"], 
             transform_params["cover_height"], transform_params["offset_y_top"], 
             transform_params["offset_y_bottom"], bg_color_bgr
@@ -460,20 +508,20 @@ class BookCoverRenderer:
         # 根据书型选择不同的书脊变换方法
         if book_type == "精装" and spine_imgs_bgr is not None:
             # 精装书使用书脊数组
-            spine_warped, display_spine_width, spine_height = self._transform_spine_hardcover(
+            spine_warped, spine_mask, display_spine_width, spine_height = self._transform_spine_hardcover(
                 spine_imgs_bgr, transform_params["cover_height"], transform_params["spine_angle_rad"], 
                 transform_params["camera_height"], transform_params["camera_height_complement"], 
                 book_distance, bg_color_bgr
             )
         elif book_type == "精装":
             # 精装书但未提供书脊数组，使用单个书脊图像
-            spine_warped, display_spine_width, spine_height = self._transform_spine_hardcover(
+            spine_warped, spine_mask, display_spine_width, spine_height = self._transform_spine_hardcover(
                 [spine], transform_params["cover_height"], transform_params["spine_angle_rad"], 
                 transform_params["camera_height"], transform_params["camera_height_complement"], 
                 book_distance, bg_color_bgr
             )
         else:  # 平装
-            spine_warped, display_spine_width, spine_height = self._transform_spine(
+            spine_warped, spine_mask, display_spine_width, spine_height = self._transform_spine(
                 spine, transform_params["cover_height"], transform_params["spine_angle_rad"], 
                 transform_params["camera_height"], transform_params["camera_height_complement"], 
                 book_distance, bg_color_bgr
@@ -497,12 +545,12 @@ class BookCoverRenderer:
             alpha_channel = np.full((final_height, final_width), bg_alpha, dtype=np.uint8)
               
             # 标记封面区域为不透明
-            cover_mask = np.any(cover_warped != bg_color_bgr, axis=2)
-            alpha_channel[:int(transform_params["cover_height"]), int(display_spine_width):][cover_mask] = 255
+            cover_region = alpha_channel[:int(transform_params["cover_height"]), int(display_spine_width):]
+            cover_region[cover_mask] = 255
             
             # 标记书脊区域为不透明
-            spine_mask = np.any(spine_warped[:, :, :3] != bg_color_bgr, axis=2)
-            alpha_channel[:int(spine_height), :int(display_spine_width)][spine_mask] = 255
+            spine_region = alpha_channel[:int(spine_height), :int(display_spine_width)]
+            spine_region[spine_mask] = 255
             
             # 合并RGB和Alpha通道
             return cv2.merge([rgb_image, alpha_channel])
