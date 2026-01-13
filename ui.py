@@ -21,25 +21,14 @@ def setup_ui():
     )
 
     # 页面标题和说明
-    st.title("📚 立体封渲染器")
+    st.title("立体封渲染器")
     st.write("上传图书封面和书脊图片，调整参数生成专业的立体图书效果")
 
     # 侧边栏 - 参数调整
     with st.sidebar:
+        
         st.header("参数设置")
         
-        # 使用expander实现折叠设置
-        with st.expander("高级设置", expanded=False):
-            # 透视参数
-            st.subheader("透视参数")
-            book_distance = st.slider("相机与书距离（mm）", 300, 1000, 800)
-            camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
-            
-            # 输出图像参数
-            st.subheader("输出图像参数")
-            final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
-            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.05, step=0.01)
-
         # 书型选择
         book_type = st.radio(
             "选择书型",
@@ -48,7 +37,7 @@ def setup_ui():
         )
 
         cover_width = st.slider("开本宽度（mm）", 120, 200, 187, 
-                                help="成品图基于真实空间尺寸计算，开本宽度不同会导致3D效果的深度不同会导致透视程度不同") 
+                                help="成品图基于真实空间尺寸计算，开本宽度不同会导致透视关系不同，请选择该书真实的开本宽度") 
     
         # 书脊阴影模式选择
         spine_shadow_mode = st.radio(
@@ -72,13 +61,36 @@ def setup_ui():
             0, 
             max_spine_spread_angle, 
             st.session_state.spine_spread_angle, 
-            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算",
+            help="如果书脊太窄，可以额外展开，最大可以展至完全面向正面.推荐为0。该滑条允许值会自动计算。注意：额外展开书脊会使得书脊的角度不符合真实透视关系",
             key="spine_spread_angle"
         )
         
-        # 渲染参数
-        bg_color = st.color_picker("背景颜色", "#ffffff")
-        bg_alpha = st.slider("背景不透明度", 0, 100, 100)
+        # 书脊加宽比例
+        spine_width_ratio = st.slider(
+            "书脊拉伸", 
+            1.0, 
+            2.0, 
+            1.0, 
+            step=0.05,
+            help="如果书脊的视觉展示效果过薄，可在此按比例拉宽书脊，默认为1（即不拉伸）。注意：拉伸会使得书脊的宽度不符合真实透视关系"
+        )
+        
+        # 使用expander实现折叠设置
+        with st.expander("高级设置", expanded=False):
+            # 透视参数
+            st.subheader("透视参数")
+            book_distance = st.slider("相机与书距离（mm）", 300, 1000, 800)
+            camera_height_ratio = st.slider("相机相对高度比例", 0.0, 1.0, 0.5, help="控制3D视角的垂直位置，0表示底部，1表示顶部")
+            
+            # 输出图像参数
+            st.subheader("输出图像参数")
+            final_size = st.slider("最终图像尺寸（像素）", 800, 2000, 1200, step=100)
+            border_percentage = st.slider("边框占比", 0.0, 0.2, 0.05, step=0.01)
+            
+            # 渲染参数
+            st.subheader("渲染参数")
+            bg_color = st.color_picker("背景颜色", "#ffffff")
+            bg_alpha = st.slider("背景不透明度", 0, 100, 100)
 
     # 主内容区域 - 文件上传和渲染
     col1, col2 = st.columns(2)
@@ -168,7 +180,8 @@ def setup_ui():
                 buffer = BytesIO()
                 img.save(buffer, format="PNG")
                 buffer.seek(0)
-                buffer.name = os.path.basename(image_path)
+                # 手动提取文件名，避免使用os.basename
+                buffer.name = image_path.split(os.path.sep)[-1] if os.path.sep in image_path else image_path
                 return buffer
             
             cover_image = image_to_bytesio(cover_path)
@@ -177,6 +190,11 @@ def setup_ui():
             # 恢复用户之前上传的文件，如果没有则使用当前上传的
             cover_image = st.session_state.saved_cover_image or user_cover_image
             spine_images = st.session_state.saved_spine_images or user_spine_images
+
+        # 使用查询参数切换到big-bang功能
+        if st.button("从PDF提取封面和书脊→", type="secondary"):
+            st.query_params["page"] = "big-bang"
+            st.rerun()
 
     with col2:
         st.header("渲染结果")
@@ -199,5 +217,6 @@ def setup_ui():
         final_size=final_size,
         border_percentage=border_percentage,
         book_type=book_type,
-        spine_shadow_mode=spine_shadow_mode
+        spine_shadow_mode=spine_shadow_mode,
+        spine_width_ratio=spine_width_ratio
     )
