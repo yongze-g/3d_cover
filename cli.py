@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--border', '-bd', type=float, default=0.1, help='边框占比（0-0.2），默认：0.1')
     parser.add_argument('--book-type', '-bt', choices=['平装', '精装'], default='平装', help='书型，默认：平装')
     parser.add_argument('--shadow-mode', '-sm', choices=['无', '线性', '反射'], default='线性', help='书脊阴影模式，默认：线性')
+    parser.add_argument('--stroke-enabled', '-se', action='store_true', help='是否为封面描边，默认：False')
     
     args = parser.parse_args()
     
@@ -78,7 +79,8 @@ def main():
             final_size=args.final_size,
             border_percentage=args.border,
             book_type=args.book_type,
-            spine_shadow_mode=args.shadow_mode
+            spine_shadow_mode=args.shadow_mode,
+            stroke_enabled=args.stroke_enabled
         )
         
         # 保存结果

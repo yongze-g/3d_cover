@@ -75,6 +75,9 @@ def setup_ui():
             help="如果书脊的视觉展示效果过薄，可在此按比例拉宽书脊，默认为1（即不拉伸）。注意：拉伸会使得书脊的宽度不符合真实透视关系"
         )
         
+        # 封面描边选项（不折叠）
+        stroke_enabled = st.checkbox("封面描边", value=False, help="为封面和书脊添加细灰色边框，突出显示图书轮廓")
+        
         # 使用expander实现折叠设置
         with st.expander("高级设置", expanded=False):
             # 透视参数
@@ -218,5 +221,6 @@ def setup_ui():
         border_percentage=border_percentage,
         book_type=book_type,
         spine_shadow_mode=spine_shadow_mode,
-        spine_width_ratio=spine_width_ratio
+        spine_width_ratio=spine_width_ratio,
+        stroke_enabled=stroke_enabled
     )

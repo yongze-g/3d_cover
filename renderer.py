@@ -475,7 +475,7 @@ class BookCoverRenderer:
     
     def _generate_3d_cover(self, cover_img, spine_img, hardcover_spines, perspective_angle, 
                           book_distance, cover_width, bg_color, bg_alpha, spine_spread_angle, 
-                          camera_height_ratio, book_type):
+                          camera_height_ratio, book_type, stroke_enabled=False):
         """
         生成3D封面效果
 
@@ -539,6 +539,27 @@ class BookCoverRenderer:
         # 放置封面和书脊
         rgb_image[:int(transform_params["cover_height"]), int(display_spine_width):] = cv2.cvtColor(cover_warped, cv2.COLOR_BGR2RGB)
         rgb_image[:int(spine_height), :int(display_spine_width)] = cv2.cvtColor(spine_warped, cv2.COLOR_BGR2RGB)
+        
+        # 如果启用描边功能，则添加细灰色描边
+        if stroke_enabled:
+            # 创建联合掩码（封面+书脊）
+            full_mask = np.zeros((final_height, final_width), dtype=np.uint8)
+            
+            # 设置封面掩码区域
+            cover_region = full_mask[:int(transform_params["cover_height"]), int(display_spine_width):]
+            cover_region[cover_mask] = 255
+            
+            # 设置书脊掩码区域
+            spine_region = full_mask[:int(spine_height), :int(display_spine_width)]
+            spine_region[spine_mask] = 255
+            
+            # 提取边界
+            contours, _ = cv2.findContours(full_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # 绘制灰色描边
+            gray_color = (128, 128, 128)  # 灰色
+            for contour in contours:
+                cv2.drawContours(rgb_image, [contour], -1, gray_color, 1)
         
         # 处理透明度
         if bg_alpha < 255:
@@ -622,7 +643,8 @@ class BookCoverRenderer:
                        final_size,                     # 最终图像尺寸
                        border_percentage,              # 边框占最终图像的比例
                        book_type,                      # 书型（平装/精装）
-                       spine_shadow_mode):             # 书脊阴影模式
+                       spine_shadow_mode,              # 书脊阴影模式
+                       stroke_enabled=False):          # 是否为封面描边
         """
         完整的3D封面渲染流程
 
@@ -640,6 +662,7 @@ class BookCoverRenderer:
             border_percentage: 边框占最终图像的比例
             book_type: 书型（平装/精装）
             spine_shadow_mode: 书脊阴影模式
+            stroke_enabled: 是否为封面描边
 
         返回:
             result_image: 渲染后的3D封面图像
@@ -655,7 +678,7 @@ class BookCoverRenderer:
             cover_img, spine_img, hardcover_spines,
             perspective_angle, book_distance, cover_width,
             bg_color, bg_alpha, spine_spread_angle,
-            camera_height_ratio, book_type
+            camera_height_ratio, book_type, stroke_enabled
         )
         
         # 进行后处理

@@ -85,7 +85,8 @@ def process_images(ui_params: UIParams):
                 border_percentage=ui_params.border_percentage,
                 book_type=ui_params.book_type,
                 spine_shadow_mode=ui_params.spine_shadow_mode,
-                spine_width_ratio=ui_params.spine_width_ratio
+                spine_width_ratio=ui_params.spine_width_ratio,
+                stroke_enabled=ui_params.stroke_enabled
             )
             
             # 使用高级方法进行完整的3D封面渲染
@@ -98,7 +99,8 @@ def process_images(ui_params: UIParams):
                 final_size=render_params.final_size, 
                 border_percentage=render_params.border_percentage,
                 book_type=render_params.book_type,
-                spine_shadow_mode=render_params.spine_shadow_mode
+                spine_shadow_mode=render_params.spine_shadow_mode,
+                stroke_enabled=render_params.stroke_enabled
             )
             
             # 显示结果
