@@ -85,11 +85,24 @@ def run_big_bang_app():
                 with open(zip_path, "rb") as f:
                     zip_data = f.read()
                 
+                # 生成包含上传PDF文件名的下载文件名
+                base_file_name = "cover_and_spine"
+                try:
+                    # 获取上传的PDF文件名（不带扩展名）
+                    pdf_file_name = uploaded_file.name
+                    # 移除扩展名
+                    pdf_name_without_ext = pdf_file_name.rsplit('.', 1)[0]
+                    # 添加到下载文件名中
+                    base_file_name += f"_{pdf_name_without_ext}"
+                except Exception:
+                    # 如果获取文件名失败，使用默认名称
+                    pass
+                
                 # 提供下载按钮
                 st.download_button(
                     label="打包下载",
                     data=zip_data,
-                    file_name="cover_and_spine.zip",
+                    file_name=f"{base_file_name}.zip",
                     mime="application/zip"
                 )
                 

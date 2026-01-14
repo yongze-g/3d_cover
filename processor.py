@@ -113,11 +113,25 @@ def process_images(ui_params: UIParams):
             result_pil.save(buf, format="PNG")
             byte_im = buf.getvalue()
             
+            # 生成包含上传文件名的下载文件名
+            base_file_name = "3d"
+            try:
+                # 获取上传的封面文件名（不带扩展名）
+                if ui_params.cover_image and hasattr(ui_params.cover_image, 'name'):
+                    cover_file_name = ui_params.cover_image.name
+                    # 移除扩展名
+                    cover_name_without_ext = cover_file_name.rsplit('.', 1)[0]
+                    # 添加到下载文件名中
+                    base_file_name += f"_{cover_name_without_ext}"
+            except Exception:
+                # 如果获取文件名失败，使用默认名称
+                pass
+            
             with ui_params.download_placeholder:
                 st.download_button(
                     label="下载立体封",
                     data=byte_im,
-                    file_name="3d_book_cover.png",
+                    file_name=f"{base_file_name}.png",
                     mime="image/png"
                 )
                 
