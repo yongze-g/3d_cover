@@ -1,0 +1,15 @@
+{
+  "book_type": "精装",
+  "cover_width": 190,
+  "spine_shadow_mode": "线性",
+  "perspective_angle": 40,
+  "spine_spread_angle": 5,
+  "spine_width_ratio": 1.2,
+  "stroke_enabled": true,
+  "book_distance": 900,
+  "camera_height_ratio": 0.6,
+  "final_size": 1500,
+  "border_percentage": 0.15,
+  "bg_color": "#f5f5f5",
+  "bg_alpha": 90
+}
