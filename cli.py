@@ -7,6 +7,7 @@
 
 import argparse
 import os
+import json
 from PIL import Image
 from renderer import BookCoverRenderer
 
@@ -31,8 +32,49 @@ def main():
     parser.add_argument('--border', '-bd', type=float, default=0.1, help='边框占比（0-0.2），默认：0.1')
     parser.add_argument('--book-type', '-bt', choices=['平装', '精装'], default='平装', help='书型，默认：平装')
     parser.add_argument('--shadow-mode', '-sm', choices=['无', '线性', '反射'], default='线性', help='书脊阴影模式，默认：线性')
+    parser.add_argument('--stroke-enabled', '-se', action='store_true', help='是否为封面描边，默认：False')
+    parser.add_argument('--config', '-C', help='配置文件路径（JSON格式），配置文件中的参数会被命令行参数覆盖')
     
     args = parser.parse_args()
+    
+    # 如果提供了配置文件，读取并应用配置
+    if args.config:
+        if not os.path.exists(args.config):
+            parser.error(f'配置文件不存在: {args.config}')
+        
+        try:
+            with open(args.config, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+            
+            # 命令行参数映射到配置文件键名
+            param_mapping = {
+                'perspective': 'perspective_angle',
+                'distance': 'book_distance',
+                'width': 'cover_width',
+                'bg_color': 'bg_color',
+                'bg_alpha': 'bg_alpha',
+                'spine_spread': 'spine_spread_angle',
+                'camera_height': 'camera_height_ratio',
+                'final_size': 'final_size',
+                'border': 'border_percentage',
+                'book_type': 'book_type',
+                'shadow_mode': 'spine_shadow_mode',
+                'stroke_enabled': 'stroke_enabled'
+            }
+            
+            # 应用配置文件中的参数（如果命令行没有提供的话）
+            for cli_param, config_key in param_mapping.items():
+                if config_key in config_data and getattr(args, cli_param) is None or getattr(args, cli_param) == parser.get_default(cli_param):
+                    # 对于布尔值参数，需要特殊处理
+                    if cli_param == 'stroke_enabled':
+                        setattr(args, cli_param, config_data[config_key])
+                    else:
+                        setattr(args, cli_param, config_data[config_key])
+                        
+        except json.JSONDecodeError as e:
+            parser.error(f'配置文件解析错误: {str(e)}')
+        except Exception as e:
+            parser.error(f'配置文件处理错误: {str(e)}')
     
     # 验证参数
     if not 0 <= args.bg_alpha <= 100:
@@ -78,7 +120,8 @@ def main():
             final_size=args.final_size,
             border_percentage=args.border,
             book_type=args.book_type,
-            spine_shadow_mode=args.shadow_mode
+            spine_shadow_mode=args.shadow_mode,
+            stroke_enabled=args.stroke_enabled
         )
         
         # 保存结果

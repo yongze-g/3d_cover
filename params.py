@@ -24,6 +24,7 @@ class UIParams:
     book_type: str = "平装"
     spine_shadow_mode: str = "线性"
     spine_width_ratio: float = 1.0
+    stroke_enabled: bool = False
 
 
 @dataclass
@@ -43,3 +44,4 @@ class RenderParams:
     book_type: str
     spine_shadow_mode: str
     spine_width_ratio: float
+    stroke_enabled: bool
