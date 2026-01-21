@@ -103,7 +103,8 @@ def run_big_bang_app():
                     label="打包下载",
                     data=zip_data,
                     file_name=f"{base_file_name}.zip",
-                    mime="application/zip"
+                    mime="application/zip",
+                    type="primary"
                 )
                 
                 # 清理临时zip文件

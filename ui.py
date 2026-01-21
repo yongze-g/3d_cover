@@ -135,49 +135,50 @@ def setup_ui():
                 "bg_alpha": bg_alpha
             }
         
-        # 配置管理 - 放在侧边栏最后面
-        st.subheader("配置管理")
-        
-        # 导出设置为JSON
-        # 将设置转换为JSON
-        json_data = json.dumps(settings, indent=2, ensure_ascii=False)
-        # 将JSON字符串转换为BytesIO对象
-        json_bytes = BytesIO(json_data.encode('utf-8'))
-        
-        # 导入JSON配置
-        uploaded_config = st.file_uploader(
-            "导入配置文件（JSON）",
-            type=["json"]
-        )
+        # 配置管理 - 放在高级设置下方，使用折叠栏
+        with st.expander("配置管理", expanded=False):
+            # 导出设置为JSON
+            # 将设置转换为JSON
+            json_data = json.dumps(settings, indent=2, ensure_ascii=False)
+            # 将JSON字符串转换为BytesIO对象
+            json_bytes = BytesIO(json_data.encode('utf-8'))
 
-        st.download_button(
-            label="导出现有配置",
-            data=json_bytes,
-            file_name="3d_cover_settings.json",
-            mime="application/json"
-        )
-        
-        # 如果有导入的配置且未处理过，应用到UI
-        if uploaded_config is not None and not st.session_state.config_processed:
-            try:
-                # 读取并解析JSON配置
-                config_data = json.load(uploaded_config)
-                
-                # 保存导入的配置到session_state
-                st.session_state.imported_config = config_data
-                
-                # 设置处理标志为True，避免重新运行后再次处理
-                st.session_state.config_processed = True
-                
-                # spine_spread_angle将在重新运行时通过get_config_value获取
-                
-                # 重新运行应用以应用新配置
-                st.rerun()
-            except Exception as e:
-                st.error(f"配置导入失败: {str(e)}")
-        # 如果没有上传新文件，重置处理标志
-        elif uploaded_config is None:
-            st.session_state.config_processed = False
+            st.write("你可以随时将现有配置导出为文件下载，也可以导入已有的配置文件。")
+            
+            st.download_button(
+                label="导出当前配置",
+                data=json_bytes,
+                file_name="3d_cover_settings.json",
+                mime="application/json"
+            )
+
+            # 导入JSON配置
+            uploaded_config = st.file_uploader(
+                "导入配置文件（JSON）",
+                type=["json"]
+            )
+
+            # 如果有导入的配置且未处理过，应用到UI
+            if uploaded_config is not None and not st.session_state.config_processed:
+                try:
+                    # 读取并解析JSON配置
+                    config_data = json.load(uploaded_config)
+                    
+                    # 保存导入的配置到session_state
+                    st.session_state.imported_config = config_data
+                    
+                    # 设置处理标志为True，避免重新运行后再次处理
+                    st.session_state.config_processed = True
+                    
+                    # spine_spread_angle将在重新运行时通过get_config_value获取
+                    
+                    # 重新运行应用以应用新配置
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"配置导入失败: {str(e)}")
+            # 如果没有上传新文件，重置处理标志
+            elif uploaded_config is None:
+                st.session_state.config_processed = False
 
     # 主内容区域 - 文件上传和渲染
     col1, col2 = st.columns(2)
@@ -192,6 +193,11 @@ def setup_ui():
             st.session_state.saved_cover_image = None
         if 'saved_spine_images' not in st.session_state:
             st.session_state.saved_spine_images = []
+
+        # 使用查询参数切换到big-bang功能
+        if st.button("从印刷文件提取封面和书脊　→", type="secondary", help="使用带血线的PDF印刷文件，提取封面和书脊图片"):
+            st.query_params["page"] = "big-bang"
+            st.rerun()
         
         # 正常上传功能（始终显示，用于保存用户选择）
         # 但仅在非示例模式下可用
@@ -209,41 +215,42 @@ def setup_ui():
             disabled=st.session_state.example_mode
         )
         
-        # 示例按钮功能
-        if st.session_state.example_mode:
-            if st.button("关闭示例图片以继续"):
-                st.session_state.example_mode = False
-                st.rerun()
-            
-            # 下载示例图片按钮
-            
-            # 准备示例图片路径
-            example_dir = "example"
-            example_files = ["cover.png", "spine1.png", "spine2.png"]
-            
-            # 创建内存中的zip文件
-            zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-                for file_name in example_files:
-                    file_path = os.path.join(example_dir, file_name)
-                    zip_file.write(file_path, file_name)
-            zip_buffer.seek(0)
-            
-            # 提供下载按钮
-            st.download_button(
-                label="下载示例图片",
-                data=zip_buffer,
-                file_name="example_images.zip",
-                mime="application/zip",
-                help="一键下载所有示例图片（封面和书脊）"
-            )
-        else:
-            if st.button("使用示例图片"):
-                # 保存用户当前上传的文件
-                st.session_state.saved_cover_image = user_cover_image
-                st.session_state.saved_spine_images = user_spine_images
-                st.session_state.example_mode = True
-                st.rerun()
+        # 快速演示功能 - 使用折叠栏
+        with st.expander("功能演示", expanded=False):
+            if st.session_state.example_mode:
+                if st.button("关闭示例图片以继续"):
+                    st.session_state.example_mode = False
+                    st.rerun()
+                
+                # 下载示例图片按钮
+                
+                # 准备示例图片路径
+                example_dir = "example"
+                example_files = ["cover.png", "spine1.png", "spine2.png"]
+                
+                # 创建内存中的zip文件
+                zip_buffer = BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                    for file_name in example_files:
+                        file_path = os.path.join(example_dir, file_name)
+                        zip_file.write(file_path, file_name)
+                zip_buffer.seek(0)
+                
+                # 提供下载按钮
+                st.download_button(
+                    label="下载示例图片",
+                    data=zip_buffer,
+                    file_name="example_images.zip",
+                    mime="application/zip",
+                    help="一键下载所有示例图片（封面和书脊）"
+                )
+            else:
+                if st.button("使用示例图片"):
+                    # 保存用户当前上传的文件
+                    st.session_state.saved_cover_image = user_cover_image
+                    st.session_state.saved_spine_images = user_spine_images
+                    st.session_state.example_mode = True
+                    st.rerun()
         
         # 根据示例模式决定使用的图片
         if st.session_state.example_mode:
@@ -271,11 +278,6 @@ def setup_ui():
             # 恢复用户之前上传的文件，如果没有则使用当前上传的
             cover_image = st.session_state.saved_cover_image or user_cover_image
             spine_images = st.session_state.saved_spine_images or user_spine_images
-
-        # 使用查询参数切换到big-bang功能
-        if st.button("从PDF提取封面和书脊→", type="secondary"):
-            st.query_params["page"] = "big-bang"
-            st.rerun()
 
     with col2:
         st.header("渲染结果")
