@@ -132,7 +132,8 @@ def process_images(ui_params: UIParams):
                     label="下载立体封",
                     data=byte_im,
                     file_name=f"{base_file_name}.png",
-                    mime="image/png"
+                    mime="image/png",
+                    type="primary"
                 )
                 
         except Exception as e:
