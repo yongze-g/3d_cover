@@ -340,9 +340,12 @@ class BookCoverRenderer:
             return spine_images.copy()
         
         # 定义阴影模式与文件路径的映射字典
+        import os
+        # 获取当前文件所在目录的绝对路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
         shadow_mapping = {
-            "线性": 'shadows/linear.png',
-            "反射": 'shadows/reflect.png'
+            "线性": os.path.join(current_dir, 'shadows', 'linear.png'),
+            "反射": os.path.join(current_dir, 'shadows', 'reflect.png')
         }
         
         # 如果阴影模式无效，直接返回原图
@@ -355,6 +358,11 @@ class BookCoverRenderer:
             # 加载阴影图片
             shadow_path = shadow_mapping[shadow_mode]
             shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
+            
+            # 检查阴影图片是否成功加载
+            if shadow_img is None:
+                print(f"无法加载阴影图片: {shadow_path}")
+                return spine_images.copy()
             
             # 对每个书脊图片应用阴影
             for spine in spine_images:

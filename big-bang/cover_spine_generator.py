@@ -534,20 +534,21 @@ def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", 
     # 返回对称位置、可视化图片路径和空的分割图片列表（在main函数中单独处理分割）
     return all_symmetry_positions, visualize_path, []
 
-def process_image_for_cover_and_spine(img_path, output_dir):
+def process_image_for_cover_and_spine(img_path, output_dir, center_skip_width=5):
     """
     处理图像生成封面和书脊
     
     Args:
         img_path: 原始图片路径
         output_dir: 输出目录
+        center_skip_width: 中间跳过区域宽度（像素）
     
     Returns:
         tuple: (cover_path, spine_path) 封面和书脊的路径
     """
     # 1. 执行横向和纵向扫描（合并到同一张图）
     directions = ["horizontal", "vertical"]  # 同时执行横向和纵向扫描
-    symmetry_positions, visualize_path, _ = find_symmetry_positions(img_path, output_dir, directions)
+    symmetry_positions, visualize_path, _ = find_symmetry_positions(img_path, output_dir, directions, center_skip_width)
     
     if not symmetry_positions:
         print("未找到对称位置，无法进行分割")

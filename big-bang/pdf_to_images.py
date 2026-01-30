@@ -49,13 +49,14 @@ def pdf_to_image(pdf_path, output_dir="."):
     
     return img_path
 
-def cut_pdf(pdf_path, output_dir="output"):
+def cut_pdf(pdf_path, output_dir="output", center_skip_width=5):
     """
     将PDF文件转换为两个图片：cover和spine
     
     Args:
         pdf_path: PDF文件路径
         output_dir: 输出目录
+        center_skip_width: 中间跳过区域宽度（像素）
     
     Returns:
         tuple: (cover_path, spine_path)
@@ -72,7 +73,7 @@ def cut_pdf(pdf_path, output_dir="output"):
     
     # 2. 调用cover_spine_generator中的整合函数生成封面和书脊
     from cover_spine_generator import process_image_for_cover_and_spine
-    cover_path, spine_path = process_image_for_cover_and_spine(img_path, output_dir)
+    cover_path, spine_path = process_image_for_cover_and_spine(img_path, output_dir, center_skip_width)
     
     print(f"转换完成！所有输出已保存到目录: {output_dir}")
     return cover_path, spine_path

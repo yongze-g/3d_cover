@@ -21,12 +21,45 @@
 - ✅ 下载生成的3D封面图片（支持透明背景PNG格式）
 - ✅ 支持Web界面和命令行两种使用方式
 - ✅ 内置PDF封面和书脊提取功能（big-bang子项目）
+- ✅ big-bang功能支持命令行接口
+- ✅ 支持PDF到3D封面一步生成功能
+- ✅ 支持配置文件（JSON格式）批量设置参数
 
 ## 技术栈
 
 - **编程语言**: Python 3.9+
 - **图像处理**: OpenCV, NumPy, Pillow
 - **Web界面**: Streamlit
+
+## 快速开始
+
+### 方法1: Web界面（推荐）
+
+1. **安装依赖**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **启动应用**
+   ```bash
+   streamlit run app.py
+   ```
+
+3. **使用指南**
+   - 上传封面和书脊图片
+   - 调整侧边栏的渲染参数
+   - 实时查看预览效果
+   - 点击"下载立体封"保存结果
+
+### 方法2: 命令行快速生成
+
+```bash
+# 基本使用
+python cli.py --cover example/cover.png --spine example/spine1.png --output result.png
+
+# 从PDF直接生成立体封
+python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png
+```
 
 ## 安装指南
 
@@ -59,7 +92,7 @@ pip install -r requirements.txt
 
 ## 使用方法
 
-### 方法1: Web界面（推荐）
+### 方法1: Web界面
 
 1. 激活环境（如果尚未激活）
    ```bash
@@ -111,6 +144,7 @@ python cli.py --cover <封面图片路径> --spine <书脊图片路径>... --out
 - `--book-type, -bt`: 书型（平装/精装），默认：平装
 - `--shadow-mode, -sm`: 书脊阴影模式（无/线性/反射），默认：线性
 - `--spine-width, -sw`: 书脊拉伸比例（1.0-2.0），默认：1.0
+- `--config, -C`: 配置文件路径（JSON格式），配置文件中的参数会被命令行参数覆盖
 
 #### 示例
 ```bash
@@ -121,42 +155,151 @@ python cli.py --cover cover.jpg --spine spine1.jpg --output result.png
 python cli.py --cover cover.jpg --spine spine1.jpg spine2.jpg --output result.png \
   --perspective 45 --distance 1000 --width 200 --bg-color #f0f0f0 --bg-alpha 50 \
   --spine-width 1.2 --book-type 精装 --shadow-mode 反射
+
+# 使用配置文件
+python cli.py --cover cover.jpg --spine spine1.jpg --output result.png --config config.json
+```
+
+### 方法3: big-bang命令行接口
+
+直接通过命令行从PDF文件中提取封面和书脊图片。
+
+```bash
+python big-bang/cli.py --pdf <PDF文件路径> [可选参数]
+```
+
+#### 必需参数
+- `--pdf, -p`: PDF文件路径
+
+#### 可选参数
+- `--output, -o`: 输出目录，默认：output
+- `--center-skip, -cs`: 中间跳过区域宽度（像素），默认：5
+- `--zip, -z`: 将结果打包为zip文件
+- `--zip-name, -zn`: zip文件名（如果未指定，将使用PDF文件名）
+
+#### 示例
+```bash
+# 基本使用
+python big-bang/cli.py --pdf sample.pdf --output result
+
+# 使用自定义参数
+python big-bang/cli.py --pdf sample.pdf --output result --center-skip 10
+
+# 生成zip包
+python big-bang/cli.py --pdf sample.pdf --output result --zip
+```
+
+### 方法4: PDF到3D封面一步生成
+
+直接从PDF文件提取封面和书脊，然后生成立体封，无需中间步骤。
+
+```bash
+python pdf_to_3dcover.py --pdf <PDF文件路径> --output <输出3D封面图片路径> [可选参数]
+```
+
+#### 必需参数
+- `--pdf, -p`: PDF文件路径
+- `--output, -o`: 输出3D封面图片路径
+
+#### 可选参数
+- `--center-skip, -cs`: 中间跳过区域宽度（像素），默认：5
+- `--temp-dir, -t`: 临时目录（如果未指定，将使用系统临时目录）
+- `--config, -C`: 配置文件路径（JSON格式）
+- 以及所有3D封面渲染参数（与cli.py相同）
+
+#### 示例
+```bash
+# 基本使用
+python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png
+
+# 使用自定义参数
+python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --perspective 45 --distance 1000
+
+# 使用配置文件
+python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.json
 ```
 
 ## 参数说明
 
 ### 核心参数
 
-- **书型选择**: 支持平装和精装两种书型，精装书型使用圆弧形书脊设计
-- **开本宽度（mm）**: 成品图基于真实空间尺寸计算，开本宽度不同会导致透视关系不同
-- **书脊阴影模式**: 选择书脊阴影效果（无/线性/反射）
-- **旋转角度（°）**: 调整立体效果的旋转角度，范围1-89度
-- **书脊额外展开角度**: 当书脊太窄时可增加此值，最大可展至完全面向正面
-- **书脊拉伸比例**: 解决书脊视觉过薄问题，范围1.0-2.0
+| 参数名称 | 描述 | 默认值 | 范围 |
+|---------|------|--------|------|
+| 书型选择 | 支持平装和精装两种书型 | 平装 | 平装/精装 |
+| 开本宽度 | 成品图基于真实空间尺寸计算 | 187mm | - |
+| 书脊阴影模式 | 选择书脊阴影效果 | 线性 | 无/线性/反射 |
+| 旋转角度 | 调整立体效果的旋转角度 | 35度 | 1-89度 |
+| 书脊额外展开角度 | 当书脊太窄时可增加此值 | 0度 | - |
+| 书脊拉伸比例 | 解决书脊视觉过薄问题 | 1.0 | 1.0-2.0 |
 
 ### 高级参数
 
-- **相机与书距离（mm）**: 控制3D效果的透视深度，距离越小效果越明显
-- **相机相对高度比例**: 控制3D视角的垂直位置，0表示从底部视角，1表示从顶部视角，0.5为标准视角
-- **最终图像尺寸（像素）**: 控制最终生成图像的尺寸，影响图像质量和文件大小
-- **边框占比**: 控制生成图像中边框的比例，范围0.0-0.2，在图像周围添加空白区域
-- **背景颜色**: 设置渲染结果的背景色
-- **背景不透明度**: 控制背景的透明程度（0表示完全透明，100表示完全不透明）
+| 参数名称 | 描述 | 默认值 | 范围 |
+|---------|------|--------|------|
+| 相机与书距离 | 控制3D效果的透视深度 | 800mm | - |
+| 相机相对高度比例 | 控制3D视角的垂直位置 | 0.5 | 0-1 |
+| 最终图像尺寸 | 控制最终生成图像的尺寸 | 1200像素 | - |
+| 边框占比 | 控制生成图像中边框的比例 | 0.05 | 0.0-0.2 |
+| 背景颜色 | 设置渲染结果的背景色 | #ffffff | 十六进制颜色 |
+| 背景不透明度 | 控制背景的透明程度 | 100 | 0-100 |
 
-## 示例图片功能
+## 配置文件使用
 
-- **使用示例图片**: 点击"使用示例图片"按钮可快速体验渲染效果，无需上传图片
-- **下载示例图片**: 在示例模式下，可下载所有示例图片（封面和书脊）的zip包
+配置文件是一种批量设置渲染参数的方法，使用JSON格式。
 
-## 特殊功能：PDF封面和书脊提取
+### 配置文件示例
 
-项目包含一个名为"big-bang"的子项目，用于从PDF文件中提取封面和书脊图片。在Web界面中，可以通过点击"从PDF提取封面和书脊"按钮切换到该功能。
+创建一个名为`config.json`的文件：
 
-## 图片预览功能
+```json
+{
+  "perspective_angle": 45,
+  "book_distance": 1000,
+  "cover_width": 190,
+  "bg_color": "#ffffff",
+  "bg_alpha": 100,
+  "spine_spread_angle": 5,
+  "camera_height_ratio": 0.5,
+  "final_size": 1500,
+  "border_percentage": 0.1,
+  "book_type": "精装",
+  "spine_shadow_mode": "线性",
+  "stroke_enabled": false,
+  "center_skip_width": 8
+}
+```
 
-- 上传的图片会以从右到左的顺序显示在界面上（封面 + 书脊）
-- 所有图片会统一显示为300px高度，保持原始宽高比
-- 显示图片名称和序号
+### 配置项说明
+
+| 配置项 | 描述 | 默认值 |
+|-------|------|--------|
+| perspective_angle | 旋转角度（度） | 35 |
+| book_distance | 相机与书距离（mm） | 800 |
+| cover_width | 开本宽度（mm） | 187 |
+| bg_color | 背景颜色（十六进制） | #ffffff |
+| bg_alpha | 背景透明度（0-100） | 100 |
+| spine_spread_angle | 书脊额外展开角度（度） | 0 |
+| camera_height_ratio | 相机高度比例（0-1） | 0.5 |
+| final_size | 最终图像尺寸（像素） | 1200 |
+| border_percentage | 边框占比（0-0.2） | 0.05 |
+| book_type | 书型（平装/精装） | 平装 |
+| spine_shadow_mode | 书脊阴影模式（无/线性/反射） | 线性 |
+| stroke_enabled | 是否为封面描边 | false |
+| center_skip_width | 中间跳过区域宽度（像素） | 5 |
+
+### 使用方法
+
+在命令行中使用`--config`参数指定配置文件：
+
+```bash
+# 使用配置文件生成3D封面
+python cli.py --cover cover.jpg --spine spine1.jpg --output result.png --config config.json
+
+# 使用配置文件从PDF生成立体封
+python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.json
+```
+
+**注意**：命令行参数会覆盖配置文件中的对应参数。
 
 ## 文件结构
 
@@ -164,6 +307,7 @@ python cli.py --cover cover.jpg --spine spine1.jpg spine2.jpg --output result.pn
 3d_cover/
 ├── app.py                # 主应用程序入口文件（支持两个应用模式）
 ├── cli.py                # 命令行接口文件
+├── pdf_to_3dcover.py     # PDF到3D封面一步生成工具
 ├── renderer.py           # 渲染器模块，处理3D封面生成核心逻辑
 ├── ui.py                 # 用户界面模块，处理交互界面
 ├── processor.py          # 处理器模块，处理图片和结果展示
@@ -179,6 +323,7 @@ python cli.py --cover cover.jpg --spine spine1.jpg spine2.jpg --output result.pn
 ├── test_resource/        # 测试资源文件夹
 ├── big-bang/             # PDF封面和书脊提取子项目
 │   ├── app.py            # 子项目入口
+│   ├── cli.py            # 子项目命令行接口
 │   ├── cover_spine_generator.py  # 封面书脊生成器
 │   ├── pdf_to_images.py  # PDF转图片功能
 │   └── symmetry_detection_algorithm.md  # 对称检测算法文档
@@ -193,14 +338,45 @@ python cli.py --cover cover.jpg --spine spine1.jpg spine2.jpg --output result.pn
 
 ## 注意事项
 
+### 图片处理
 - 为获得最佳效果，请确保上传的封面和书脊图片具有相同的高度
 - 支持的图片格式：PNG, JPG, JPEG
 - 对于大型图片文件，处理时间可能会略有延长
+
+### 渲染效果
 - 当设置背景不透明度小于100时，下载的PNG图片将保留透明背景
 - 系统会自动将多个书脊图片拼合，单书脊视为长度为1的多书脊
 - 线性阴影模式可以为书脊添加更真实的阴影效果
 - 书脊额外展开角度会影响透视关系的真实性
 - 书脊拉伸会改变书脊的真实宽度比例
+
+### PDF处理
+- PDF提取功能基于对称检测算法，对于某些特殊设计的封面可能效果不佳
+- 可以通过调整`center_skip_width`参数来优化提取效果
+
+## 常见问题解答（FAQ）
+
+### Q: 为什么我的书脊看起来很薄？
+A: 可以尝试以下方法：
+- 增加"书脊拉伸比例"参数
+- 增加"书脊额外展开角度"参数
+- 选择"精装"书型
+
+### Q: 如何获得透明背景的立体封？
+A: 在侧边栏将"背景不透明度"设置为0，然后下载结果即可获得透明背景的PNG图片。
+
+### Q: PDF提取功能无法正确识别封面和书脊怎么办？
+A: 可以尝试调整`center_skip_width`参数，增加中间跳过区域的宽度，以排除封面和书脊之间的干扰。
+
+### Q: 如何批量生成多个3D封面？
+A: 可以使用配置文件和批处理脚本，例如：
+
+```bash
+# Windows批处理示例
+for %%f in (*.pdf) do (
+    python pdf_to_3dcover.py --pdf "%%f" --output "%%~nf_3d.png" --config config.json
+)
+```
 
 ## 许可证
 
