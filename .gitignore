@@ -1,0 +1,9 @@
+__pycache__/
+.trae/
+*.pdf
+big-bang/analysis_output/
+big-bang/*/
+*.DS_Store
+.devcontainer/
+.pytest_cache/
+reference

@@ -1,0 +1,33 @@
+[theme]
+# 主题基础设置
+base = "dark"
+
+# 颜色配置 - 高级感深蓝灰色调
+textColor = "#e8eaed"          # 柔和的浅灰色文本，提高可读性
+primaryColor = "#4285f4"       # 谷歌蓝，专业且具有科技感
+backgroundColor = "#121212"     # 纯黑色背景，营造高级感
+secondaryBackgroundColor = "#1e1e1e" # 深灰色次级背景，增加层次感
+
+# 组件边框设置
+showWidgetBorder = true
+borderColor = "#333333"        # 中灰色边框，精致不突兀
+
+# 数据表格样式
+dataframeHeaderBackgroundColor = "#16213e" # 与次级背景色保持一致
+
+# 字体设置
+# baseFontWeight = 300
+baseFontSize = 14
+
+# 标题样式
+headingFont = "Arial"
+# headingFontWeights = [300, 400, 400, 300, 300, 300]
+headingFontSizes = ["2.5rem", "1.5rem", "1rem"]
+
+[server]
+# 服务器设置
+enableCORS = false
+
+[ui]
+# UI设置
+tabsHidden = false
