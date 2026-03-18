@@ -48,7 +48,7 @@ def main():
     parser.add_argument('--final-size', '-fs', type=int, default=1200, help='最终图像尺寸（像素），默认：1200')
     parser.add_argument('--border', '-bd', type=float, default=0.1, help='边框占比（0-0.2），默认：0.1')
     parser.add_argument('--book-type', '-bt', choices=['平装', '精装'], default='平装', help='书型，默认：平装')
-    parser.add_argument('--shadow-mode', '-sm', choices=['无', '线性', '反射'], default='线性', help='书脊阴影模式，默认：线性')
+    parser.add_argument('--shadow-mode', '-sm', choices=['无', '线性', '反射', '阴影'], default='线性', help='阴影模式，默认：线性')
     parser.add_argument('--stroke-enabled', '-se', action='store_true', help='是否为封面描边')
     
     args = parser.parse_args()
@@ -74,7 +74,7 @@ def main():
                 'final_size': 'final_size',
                 'border': 'border_percentage',
                 'book_type': 'book_type',
-                'shadow_mode': 'spine_shadow_mode',
+                'shadow_mode': 'shadow_mode',
                 'stroke_enabled': 'stroke_enabled',
                 'center_skip': 'center_skip_width'
             }
@@ -150,7 +150,7 @@ def main():
         # 执行渲染
         result_image = renderer.render_3d_cover(
             cover_img=cover_img,
-            spine_images=[spine_img],  # 传递单个数脊图片列表
+            spine_images=[spine_img],
             perspective_angle=args.perspective,
             book_distance=args.distance,
             cover_width=args.width,
@@ -161,7 +161,7 @@ def main():
             final_size=args.final_size,
             border_percentage=args.border,
             book_type=args.book_type,
-            spine_shadow_mode=args.shadow_mode,
+            shadow_mode=args.shadow_mode,
             stroke_enabled=args.stroke_enabled
         )
         

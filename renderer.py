@@ -324,64 +324,86 @@ class BookCoverRenderer:
         merged_rgb = cv2.cvtColor(merged, cv2.COLOR_BGR2RGB)
         return Image.fromarray(merged_rgb)
     
+    def _apply_shadow_to_images(self, images, shadow_mode, shadow_type):
+        """
+        对图像应用阴影效果
+
+        参数:
+            images: PIL格式的多个图像列表
+            shadow_mode: 阴影模式（无/线性/反射/阴影）
+            shadow_type: 阴影类型（"spine" 或 "cover"）
+
+        返回:
+            processed_images: 应用阴影后的图像列表（PIL格式）
+        """
+        if not images or shadow_mode == "无":
+            return images.copy() if images else []
+        
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        shadow_mapping = {
+            "线性": "linear.png",
+            "反射": "reflect.png",
+            "阴影": "shadow.png"
+        }
+        
+        if shadow_mode not in shadow_mapping:
+            return images.copy() if images else []
+        
+        processed_images = []
+        
+        try:
+            shadow_path = os.path.join(current_dir, 'shadows', shadow_type, shadow_mapping[shadow_mode])
+            shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
+            
+            if shadow_img is None:
+                print(f"无法加载阴影图片: {shadow_path}")
+                return images.copy() if images else []
+            
+            for img in images:
+                img_array = np.array(img)
+                img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+                
+                img_with_shadow = self._overlay_shadow(img_bgr, shadow_img)
+                
+                processed_img = Image.fromarray(cv2.cvtColor(img_with_shadow, cv2.COLOR_BGR2RGB))
+                processed_images.append(processed_img)
+        except Exception as e:
+            print(f"无法加载或应用阴影：{str(e)}")
+            return images.copy() if images else []
+        
+        return processed_images
+    
     def _apply_shadow_to_spines(self, spine_images, shadow_mode):
         """
         对书脊图像应用阴影效果
 
         参数:
             spine_images: PIL格式的多个书脊图像列表
-            shadow_mode: 阴影模式（无/线性/反射）
+            shadow_mode: 阴影模式（无/线性/反射/阴影）
 
         返回:
             processed_spine_images: 应用阴影后的书脊图像列表（PIL格式）
         """
-        # 如果没有书脊图片或阴影模式为"无"，直接返回原图
-        if not spine_images or shadow_mode == "无":
-            return spine_images.copy()
+        return self._apply_shadow_to_images(spine_images, shadow_mode, "spine")
+    
+    def _apply_shadow_to_cover(self, cover_image, shadow_mode):
+        """
+        对封面图像应用阴影效果
+
+        参数:
+            cover_image: PIL格式的封面图像
+            shadow_mode: 阴影模式（无/线性/反射/阴影）
+
+        返回:
+            processed_cover: 应用阴影后的封面图像（PIL格式）
+        """
+        if cover_image is None or shadow_mode == "无":
+            return cover_image
         
-        # 定义阴影模式与文件路径的映射字典
-        import os
-        # 获取当前文件所在目录的绝对路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        shadow_mapping = {
-            "线性": os.path.join(current_dir, 'shadows', 'linear.png'),
-            "反射": os.path.join(current_dir, 'shadows', 'reflect.png')
-        }
-        
-        # 如果阴影模式无效，直接返回原图
-        if shadow_mode not in shadow_mapping:
-            return spine_images.copy()
-        
-        processed_spines = []
-        
-        try:
-            # 加载阴影图片
-            shadow_path = shadow_mapping[shadow_mode]
-            shadow_img = cv2.imread(shadow_path, cv2.IMREAD_UNCHANGED)
-            
-            # 检查阴影图片是否成功加载
-            if shadow_img is None:
-                print(f"无法加载阴影图片: {shadow_path}")
-                return spine_images.copy()
-            
-            # 对每个书脊图片应用阴影
-            for spine in spine_images:
-                # 将PIL图像转换为OpenCV格式进行处理
-                spine_array = np.array(spine)
-                spine_bgr = cv2.cvtColor(spine_array, cv2.COLOR_RGB2BGR)
-                
-                # 应用阴影
-                spine_with_shadow = self._overlay_shadow(spine_bgr, shadow_img)
-                
-                # 将处理后的图像转回PIL格式
-                processed_spine = Image.fromarray(cv2.cvtColor(spine_with_shadow, cv2.COLOR_BGR2RGB))
-                processed_spines.append(processed_spine)
-        except Exception as e:
-            # 如果阴影处理失败，返回原图
-            print(f"无法加载或应用阴影：{str(e)}")
-            return spine_images.copy()
-        
-        return processed_spines
+        result = self._apply_shadow_to_images([cover_image], shadow_mode, "cover")
+        return result[0] if result else cover_image
     
     def _process_spines(self, spine_images, book_type):
         """
@@ -651,7 +673,7 @@ class BookCoverRenderer:
                        final_size,                     # 最终图像尺寸
                        border_percentage,              # 边框占最终图像的比例
                        book_type,                      # 书型（平装/精装）
-                       spine_shadow_mode,              # 书脊阴影模式
+                       shadow_mode,                    # 阴影模式（无/线性/反射/阴影）
                        stroke_enabled=False):          # 是否为封面描边
         """
         完整的3D封面渲染流程
@@ -669,27 +691,25 @@ class BookCoverRenderer:
             final_size: 最终图像尺寸
             border_percentage: 边框占最终图像的比例
             book_type: 书型（平装/精装）
-            spine_shadow_mode: 书脊阴影模式
+            shadow_mode: 阴影模式（无/线性/反射/阴影）
             stroke_enabled: 是否为封面描边
 
         返回:
             result_image: 渲染后的3D封面图像
         """
-        # 应用阴影效果
-        processed_spine_images = self._apply_shadow_to_spines(spine_images, spine_shadow_mode)
+        processed_cover_img = self._apply_shadow_to_cover(cover_img, shadow_mode)
         
-        # 处理书脊图像，根据书型决定是否拼合书脊
+        processed_spine_images = self._apply_shadow_to_spines(spine_images, shadow_mode)
+        
         spine_img, hardcover_spines = self._process_spines(processed_spine_images, book_type)
         
-        # 生成3D封面
         result_image = self._generate_3d_cover(
-            cover_img, spine_img, hardcover_spines,
+            processed_cover_img, spine_img, hardcover_spines,
             perspective_angle, book_distance, cover_width,
             bg_color, bg_alpha, spine_spread_angle,
             camera_height_ratio, book_type, stroke_enabled
         )
         
-        # 进行后处理
         result_image = self._post_process_image(
             result_image, final_size, border_percentage, bg_color, bg_alpha
         )

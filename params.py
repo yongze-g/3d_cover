@@ -22,7 +22,7 @@ class UIParams:
     final_size: int = 1200
     border_percentage: float = 0.1
     book_type: str = "平装"
-    spine_shadow_mode: str = "线性"
+    shadow_mode: str = "线性"
     spine_width_ratio: float = 1.0
     stroke_enabled: bool = False
 
@@ -42,6 +42,6 @@ class RenderParams:
     final_size: int
     border_percentage: float
     book_type: str
-    spine_shadow_mode: str
+    shadow_mode: str
     spine_width_ratio: float
     stroke_enabled: bool

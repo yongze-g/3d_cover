@@ -8,7 +8,7 @@
 
 - ✅ 支持上传封面和书脊图片（支持多书脊模式）
 - ✅ 支持平装和精装两种书型
-- ✅ 支持书脊阴影效果（无/线性/反射）
+- ✅ 支持阴影效果（无/线性/反射/阴影），同时应用于封面和书脊
 - ✅ 可调整相机与书距离、开本宽度、旋转角度等参数
 - ✅ 支持书脊额外展开角度调节
 - ✅ 支持相机高度比例调整，获得不同视角
@@ -146,7 +146,7 @@ python cli.py --cover <封面图片路径> --spine <书脊图片路径>... --out
 - `--final-size, -fs`: 最终图像尺寸（像素），默认：1200
 - `--border, -bd`: 边框占比（0-0.2），默认：0.05
 - `--book-type, -bt`: 书型（平装/精装），默认：平装
-- `--shadow-mode, -sm`: 书脊阴影模式（无/线性/反射），默认：线性
+- `--shadow-mode, -sm`: 阴影模式（无/线性/反射/阴影），默认：线性
 - `--spine-width, -sw`: 书脊拉伸比例（1.0-2.0），默认：1.0
 - `--config, -C`: 配置文件路径（JSON格式），配置文件中的参数会被命令行参数覆盖
 
@@ -233,7 +233,7 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
 |---------|------|--------|------|
 | 书型选择 | 支持平装和精装两种书型 | 平装 | 平装/精装 |
 | 开本宽度 | 成品图基于真实空间尺寸计算 | 187mm | - |
-| 书脊阴影模式 | 选择书脊阴影效果 | 线性 | 无/线性/反射 |
+| 阴影模式 | 选择阴影效果，同时应用于封面和书脊 | 线性 | 无/线性/反射/阴影 |
 | 旋转角度 | 调整立体效果的旋转角度 | 35度 | 1-89度 |
 | 书脊额外展开角度 | 当书脊太窄时可增加此值 | 0度 | - |
 | 书脊拉伸比例 | 解决书脊视觉过薄问题 | 1.0 | 1.0-2.0 |
@@ -269,7 +269,7 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
   "final_size": 1500,
   "border_percentage": 0.1,
   "book_type": "精装",
-  "spine_shadow_mode": "线性",
+  "shadow_mode": "线性",
   "stroke_enabled": false,
   "center_skip_width": 8,
   "manual_split_k": 0
@@ -290,7 +290,7 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
 | final_size | 最终图像尺寸（像素） | 1200 |
 | border_percentage | 边框占比（0-0.2） | 0.05 |
 | book_type | 书型（平装/精装） | 平装 |
-| spine_shadow_mode | 书脊阴影模式（无/线性/反射） | 线性 |
+| shadow_mode | 阴影模式（无/线性/反射/阴影） | 线性 |
 | stroke_enabled | 是否为封面描边 | false |
 | center_skip_width | 中间跳过区域宽度（像素） | 5 |
 | manual_split_k | 手动第一次分割位置k | 0 |
@@ -322,8 +322,14 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
 ├── params.py             # 参数配置文件（定义数据类）
 ├── requirements.txt      # 项目依赖
 ├── shadows/              # 阴影图片资源文件夹
-│   ├── linear.png        # 线性阴影图片
-│   └── reflect.png       # 反射阴影图片
+│   ├── spine/            # 书脊阴影图片
+│   │   ├── linear.png    # 线性阴影图片
+│   │   ├── reflect.png   # 反射阴影图片
+│   │   └── shadow.png    # 阴影效果图片
+│   └── cover/            # 封面阴影图片
+│       ├── linear.png    # 线性阴影图片
+│       ├── reflect.png   # 反射阴影图片
+│       └── shadow.png    # 阴影效果图片
 ├── example/              # 示例图片文件夹
 │   ├── cover.png         # 示例封面图片
 │   ├── spine1.png        # 示例书脊图片1
@@ -355,7 +361,7 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
 ### 渲染效果
 - 当设置背景不透明度小于100时，下载的PNG图片将保留透明背景
 - 系统会自动将多个书脊图片拼合，单书脊视为长度为1的多书脊
-- 线性阴影模式可以为书脊添加更真实的阴影效果
+- 阴影模式会同时应用于封面和书脊，为图像添加更真实的光影效果
 - 书脊额外展开角度会影响透视关系的真实性
 - 书脊拉伸会改变书脊的真实宽度比例
 

@@ -58,10 +58,10 @@ def setup_ui():
                                 help="成品图基于真实空间尺寸计算，开本宽度不同会导致透视关系不同，请选择该书真实的开本宽度") 
     
         # 书脊阴影模式选择
-        spine_shadow_mode = st.radio(
-            "书脊阴影模式",
-            options=["无", "线性", "反射"],
-            index=["无", "线性", "反射"].index(get_config_value("spine_shadow_mode", "线性"))
+        shadow_mode = st.radio(
+            "阴影模式",
+            options=["无", "线性", "反射", "阴影"],
+            index=["无", "线性", "反射", "阴影"].index(get_config_value("shadow_mode", "线性"))
         )
         
         perspective_angle = st.slider("旋转角度（°）", 1, 89, get_config_value("perspective_angle", 35))
@@ -122,7 +122,7 @@ def setup_ui():
             settings = {
                 "book_type": book_type,
                 "cover_width": cover_width,
-                "spine_shadow_mode": spine_shadow_mode,
+                "shadow_mode": shadow_mode,
                 "perspective_angle": perspective_angle,
                 "spine_spread_angle": st.session_state.spine_spread_angle,
                 "spine_width_ratio": spine_width_ratio,
@@ -300,7 +300,7 @@ def setup_ui():
         final_size=final_size,
         border_percentage=border_percentage,
         book_type=book_type,
-        spine_shadow_mode=spine_shadow_mode,
+        shadow_mode=shadow_mode,
         spine_width_ratio=spine_width_ratio,
         stroke_enabled=stroke_enabled
     )
