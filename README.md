@@ -65,6 +65,26 @@ python cli.py --cover example/cover.png --spine example/spine1.png --output resu
 python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png
 ```
 
+### 方法3: PDF到3D封面一步生成（Web界面）
+
+```bash
+streamlit run app_pdf.py
+```
+
+这是一个整合了PDF提取和3D渲染的一站式工具：
+- 直接上传PDF文件，第一个PDF提取封面和书脊
+- 后续PDF只提取书脊（支持套书）
+- 每个PDF可独立调整分割参数
+- 自动生成3D立体封面
+
+### 方法4: 命令行接口
+
+直接通过命令行生成3D封面，无需启动Web界面。
+
+```bash
+python cli.py --cover <封面图片路径> --spine <书脊图片路径>... --output <输出图片路径> [可选参数]
+```
+
 ## 安装指南
 
 ### 方法1: 使用Conda环境（推荐）
@@ -314,8 +334,9 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
 ```
 3d_cover/
 ├── app.py                # 主应用程序入口文件（支持两个应用模式）
+├── app_pdf.py            # PDF到3D封面一步生成Web界面
 ├── cli.py                # 命令行接口文件
-├── pdf_to_3dcover.py     # PDF到3D封面一步生成工具
+├── pdf_to_3dcover.py     # PDF到3D封面一步生成命令行工具
 ├── renderer.py           # 渲染器模块，处理3D封面生成核心逻辑
 ├── ui.py                 # 用户界面模块，处理交互界面
 ├── processor.py          # 处理器模块，处理图片和结果展示

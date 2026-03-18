@@ -24,7 +24,7 @@ from constants import K_MAX, CENTER_SKIP_WIDTH, CENTER_SKIP_MAX
 from renderer import BookCoverRenderer
 
 st.set_page_config(
-    page_title="PDF到3D封面",
+    page_title="立体封生成器 - PDF整合版）",
     page_icon="📚",
     layout="wide"
 )
@@ -189,8 +189,8 @@ def process_single_pdf(pdf_file, temp_dir, idx, is_first_pdf):
         return result
 
 def main():
-    st.title("PDF到3D封面一步生成")
-    st.write("上传带出血线的PDF印刷文件，自动提取封面和书脊，生成3D立体封面效果。第一个PDF提取封面和书脊，后续PDF只提取书脊。")
+    st.title("立体封生成器 - PDF整合版")
+    st.write("上传带出血线的PDF印刷文件，自动提取封面和书脊，生成立体封效果。第一个PDF提取封面和书脊，后续PDF只提取书脊。")
     
     if 'imported_config' not in st.session_state:
         st.session_state['imported_config'] = None
@@ -218,6 +218,10 @@ def main():
     st.write("血线识别算法持续优化中，若出现识别错误，可以在WPS中临时删除错误识别的血线，或用纯白色色块临时遮盖。")
     
     if uploaded_files:
+        old_files = st.session_state.uploaded_files if st.session_state.uploaded_files else []
+        old_names = [f.name for f in old_files] if old_files else []
+        new_names = [f.name for f in uploaded_files]
+        
         files_changed = (
             len(uploaded_files) != len(st.session_state.uploaded_files) or
             any(f1.name != f2.name for f1, f2 in zip(uploaded_files, st.session_state.uploaded_files))
@@ -231,6 +235,14 @@ def main():
                     pass
             
             st.session_state.temp_dir = tempfile.mkdtemp()
+            
+            old_split_params_by_name = {}
+            if st.session_state.split_params:
+                for old_idx, old_file in enumerate(old_files):
+                    old_key = f"pdf_{old_idx}"
+                    if old_key in st.session_state.split_params:
+                        old_split_params_by_name[old_file.name] = st.session_state.split_params[old_key]
+            
             st.session_state.uploaded_files = uploaded_files
             st.session_state.pdf_results = []
             st.session_state.split_params = {}
@@ -238,6 +250,15 @@ def main():
             for idx, pdf_file in enumerate(uploaded_files):
                 result = process_single_pdf(pdf_file, st.session_state.temp_dir, idx, idx == 0)
                 st.session_state.pdf_results.append(result)
+                
+                param_key = f"pdf_{idx}"
+                if pdf_file.name in old_split_params_by_name:
+                    st.session_state.split_params[param_key] = old_split_params_by_name[pdf_file.name]
+                else:
+                    st.session_state.split_params[param_key] = {
+                        "center_skip_width": CENTER_SKIP_WIDTH,
+                        "manual_split_k": 0
+                    }
     
     if st.session_state.pdf_results:
         col_left, col_right = st.columns(2)
@@ -341,9 +362,9 @@ def main():
         
         with col_right:
             if all_valid and all_cover_paths and all_spine_paths:
-                st.subheader("3D封面渲染")
+                st.subheader("立体封渲染")
                 
-                with st.spinner("正在渲染3D封面..."):
+                with st.spinner("正在渲染立体封……"):
                     cover_img = Image.open(all_cover_paths[0]).convert('RGB')
                     spine_imgs = [Image.open(sp).convert('RGB') for sp in all_spine_paths]
                     
@@ -392,7 +413,7 @@ def main():
                         pass
                     
                     st.download_button(
-                        label="下载3D封面",
+                        label="下载立体封",
                         data=byte_im,
                         file_name=f"{base_file_name}.png",
                         mime="image/png",
