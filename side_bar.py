@@ -77,6 +77,8 @@ def setup_render_params_sidebar(imported_config=None):
         
         stroke_enabled = st.checkbox("封面描边", value=get_config_value(imported_config, "stroke_enabled", False), help="为封面和书脊添加细灰色边框，突出显示图书轮廓")
         
+        is_2d = st.checkbox("2.5d模式", value=get_config_value(imported_config, "is_2d", False), help="启用2.5d渲染模式")
+        
         with st.expander("高级设置", expanded=False):
             st.subheader("透视参数")
             book_distance = st.slider("相机与书距离（mm）", 300, 1000, get_config_value(imported_config, "book_distance", 800))
@@ -143,6 +145,7 @@ def setup_render_params_sidebar(imported_config=None):
         "spine_spread_angle": spine_spread_angle,
         "spine_width_ratio": spine_width_ratio,
         "stroke_enabled": stroke_enabled,
+        "is_2d": is_2d,
         "book_distance": book_distance,
         "camera_height_ratio": camera_height_ratio,
         "final_size": final_size,

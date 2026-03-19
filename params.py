@@ -25,6 +25,7 @@ class UIParams:
     shadow_mode: str = "线性"
     spine_width_ratio: float = 1.0
     stroke_enabled: bool = False
+    is_2d: bool = False
 
 
 @dataclass
@@ -45,3 +46,4 @@ class RenderParams:
     shadow_mode: str
     spine_width_ratio: float
     stroke_enabled: bool
+    is_2d: bool
