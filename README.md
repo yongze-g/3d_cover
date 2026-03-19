@@ -338,7 +338,7 @@ python pdf_to_3dcover.py --pdf sample.pdf --output 3d_cover.png --config config.
 ├── cli.py                # 命令行接口文件
 ├── pdf_to_3dcover.py     # PDF到3D封面一步生成命令行工具
 ├── renderer.py           # 渲染器模块，处理3D封面生成核心逻辑
-├── ui.py                 # 用户界面模块，处理交互界面
+├── side_bar.py           # 共享的侧边栏渲染参数设置
 ├── processor.py          # 处理器模块，处理图片和结果展示
 ├── params.py             # 参数配置文件（定义数据类）
 ├── requirements.txt      # 项目依赖
