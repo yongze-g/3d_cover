@@ -108,14 +108,17 @@ class BookCoverRenderer:
         # 计算底部和顶部偏移量
         bottom_offset = np.zeros(w)
         top_offset = np.zeros(w)
-        
+
         if spine_offset_y_bottom > 0:
             bottom_offset = np.sqrt((1 - normalized_x**2) * (spine_offset_y_bottom**2)) - spine_offset_y_bottom
             bottom_offset = bottom_offset.astype(int)
-        
-        if spine_offset_y_top > 0:
-            top_offset = np.sqrt((1 - normalized_x**2) * (spine_offset_y_top**2)) - spine_offset_y_top
-            top_offset = top_offset.astype(int)
+            
+        if self._is_2d:
+            top_offset = - bottom_offset - self._2d_cover_offset
+        else:
+            if spine_offset_y_top > 0:
+                top_offset = np.sqrt((1 - normalized_x**2) * (spine_offset_y_top**2)) - spine_offset_y_top
+                top_offset = top_offset.astype(int)
         
         # 创建y坐标数组 (0到h-1)
         y = np.arange(h)
@@ -129,11 +132,14 @@ class BookCoverRenderer:
             normalized_y = y / h
 
             # 计算每一行的偏移量（线性插值）
-            offsets = np.where(
-                normalized_y < 0.5,
-                current_top_offset * (1 - 2 * normalized_y),
-                -current_bottom_offset * (2 * normalized_y - 1)
-            ).astype(int)
+            if self._is_2d:
+                offsets = - (current_bottom_offset + (1 - normalized_y) * self._2d_cover_offset).astype(int) 
+            else:
+                offsets = np.where(
+                    normalized_y < 0.5,
+                    current_top_offset * (1 - 2 * normalized_y),
+                    -current_bottom_offset * (2 * normalized_y - 1)
+                ).astype(int)
         
             # 计算新的y坐标
             new_y = y + offsets
@@ -180,6 +186,8 @@ class BookCoverRenderer:
         display_spine_widths = []
 
         last_spine_height = cover_height
+
+        self._2d_spine_offset = 0.0
         
         for spine_img in spine_imgs:
             # 获取书脊图像尺寸
@@ -193,11 +201,14 @@ class BookCoverRenderer:
             pivot_offset_y_bottom = camera_height * pivot_width * np.cos(spine_angle_rad) / (
                 book_distance + pivot_width * np.cos(spine_angle_rad)) 
 
+            pivot_offset_y_top = camera_height_complement * pivot_width * np.cos(spine_angle_rad) / (
+                book_distance + pivot_width * np.cos(spine_angle_rad)) 
+
             if self._is_2d:
-                pivot_offset_y_top = - pivot_offset_y_bottom # 还没搞完
+                self._2d_spine_offset += pivot_offset_y_top
+                print(f"self._2d_spine_offset set to: {self._2d_spine_offset}")
             else:
-                pivot_offset_y_top = camera_height_complement * pivot_width * np.cos(spine_angle_rad) / (
-                    book_distance + pivot_width * np.cos(spine_angle_rad)) 
+                1
 
             spine_warped = cv2.resize(
                 spine_img, (int(pivot_width_px), int(pivot_height)),
@@ -226,7 +237,10 @@ class BookCoverRenderer:
                 interpolation=cv2.INTER_NEAREST  # 使用最近邻插值保持掩码的布尔值
             ).astype(bool)
 
-            last_spine_height = display_height - pivot_offset_y_top - pivot_offset_y_bottom
+            if self._is_2d:
+                1
+            else:
+                last_spine_height = display_height - pivot_offset_y_top - pivot_offset_y_bottom
             
             warped_spines.append(spine_warped)
             warped_spine_masks.append(spine_mask)
@@ -506,6 +520,7 @@ class BookCoverRenderer:
                         [original_cover_w, original_cover_h], [0, original_cover_h]])
         if self._is_2d:
             self._2d_cover_offset = offset_y_bottom
+            print(f"self._2d_cover_offset set to: {self._2d_cover_offset}")
             cover_transformed = np.float32([[0, self._2d_cover_offset], [display_cover_width, 0], 
                         [display_cover_width, cover_height - self._2d_cover_offset], [0, cover_height]])
         else:
@@ -540,6 +555,7 @@ class BookCoverRenderer:
         返回:
             渲染后的图像（RGB或RGBA格式的numpy数组）
         """
+        print("\n")
         # 转换图像格式
         cover, spine, spine_imgs_bgr = self._convert_images_to_bgr(cover_img, spine_img, hardcover_spines, book_type)
         
