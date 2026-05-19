@@ -204,12 +204,6 @@ class BookCoverRenderer:
             pivot_offset_y_top = camera_height_complement * pivot_width * np.cos(spine_angle_rad) / (
                 book_distance + pivot_width * np.cos(spine_angle_rad)) 
 
-            if self._is_2d:
-                self._2d_spine_offset += pivot_offset_y_top
-                print(f"self._2d_spine_offset set to: {self._2d_spine_offset}")
-            else:
-                1
-
             spine_warped = cv2.resize(
                 spine_img, (int(pivot_width_px), int(pivot_height)),
                 interpolation=cv2.INTER_LANCZOS4
@@ -237,10 +231,7 @@ class BookCoverRenderer:
                 interpolation=cv2.INTER_NEAREST  # 使用最近邻插值保持掩码的布尔值
             ).astype(bool)
 
-            if self._is_2d:
-                1
-            else:
-                last_spine_height = display_height - pivot_offset_y_top - pivot_offset_y_bottom
+            last_spine_height = display_height - pivot_offset_y_top - pivot_offset_y_bottom
             
             warped_spines.append(spine_warped)
             warped_spine_masks.append(spine_mask)
@@ -745,7 +736,7 @@ class BookCoverRenderer:
         返回:
             result_image: 渲染后的3D封面图像
         """
-        self._is_2d = is_2d
+        self._is_2d = is_2d if book_type == "平装（2.5D）" else False
         
         processed_cover_img = self._apply_shadow_to_cover(cover_img, shadow_mode)
         

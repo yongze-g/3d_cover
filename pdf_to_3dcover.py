@@ -47,8 +47,8 @@ def main():
     parser.add_argument('--camera-height', '-ch', type=float, default=0.5, help='相机高度比例（0-1），默认：0.5')
     parser.add_argument('--final-size', '-fs', type=int, default=1200, help='最终图像尺寸（像素），默认：1200')
     parser.add_argument('--border', '-bd', type=float, default=0.1, help='边框占比（0-0.2），默认：0.1')
-    parser.add_argument('--book-type', '-bt', choices=['平装', '精装'], default='平装', help='书型，默认：平装')
-    parser.add_argument('--shadow-mode', '-sm', choices=['无', '线性', '反射', '阴影'], default='线性', help='阴影模式，默认：线性')
+    parser.add_argument('--book-type', '-bt', choices=['paperback', 'paperback-2.5d', 'hardcover'], default='paperback', help='书型：paperback（平装）, paperback-2.5d（平装2.5D）, hardcover（精装）。默认：paperback')
+    parser.add_argument('--shadow-mode', '-sm', choices=['none', 'linear', 'reflection', 'shadow'], default='linear', help='阴影模式：none（无）, linear（线性）, reflection（反射）, shadow（阴影）。默认：linear')
     parser.add_argument('--stroke-enabled', '-se', action='store_true', help='是否为封面描边')
     
     args = parser.parse_args()
@@ -110,6 +110,24 @@ def main():
     if not 0 <= args.border <= 0.2:
         parser.error('--border 必须在 0-0.2 之间')
     
+    # 命令行参数到内部参数的映射
+    book_type_mapping = {
+        'paperback': '平装',
+        'paperback-2.5d': '平装（2.5D）',
+        'hardcover': '精装'
+    }
+    
+    shadow_mode_mapping = {
+        'none': '无',
+        'linear': '线性',
+        'reflection': '反射',
+        'shadow': '阴影'
+    }
+    
+    # 将命令行参数转换为内部使用的值
+    book_type_internal = book_type_mapping[args.book_type]
+    shadow_mode_internal = shadow_mode_mapping[args.shadow_mode]
+    
     try:
         # 创建临时目录
         if args.temp_dir:
@@ -147,6 +165,9 @@ def main():
         # 计算背景透明度（转换为0-255范围）
         bg_alpha = int(args.bg_alpha * 255 / 100)
         
+        # 确定是否启用2.5D模式
+        is_2d = (book_type_internal == "平装（2.5D）")
+        
         # 执行渲染
         result_image = renderer.render_3d_cover(
             cover_img=cover_img,
@@ -160,9 +181,10 @@ def main():
             camera_height_ratio=args.camera_height,
             final_size=args.final_size,
             border_percentage=args.border,
-            book_type=args.book_type,
-            shadow_mode=args.shadow_mode,
-            stroke_enabled=args.stroke_enabled
+            book_type=book_type_internal,
+            shadow_mode=shadow_mode_internal,
+            stroke_enabled=args.stroke_enabled,
+            is_2d=is_2d
         )
         
         # 保存结果
