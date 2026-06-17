@@ -20,12 +20,11 @@ class UIParams:
     spine_spread_angle: int = 0
     camera_height_ratio: float = 0.5
     final_size: int = 1200
-    border_percentage: float = 0.1
+    border_percentage: float = 0.05
     book_type: str = "平装"
     shadow_mode: str = "线性"
     spine_width_ratio: float = 1.0
     stroke_enabled: bool = False
-    is_2d: bool = False
 
 
 @dataclass
@@ -46,4 +45,3 @@ class RenderParams:
     shadow_mode: str
     spine_width_ratio: float
     stroke_enabled: bool
-    is_2d: bool

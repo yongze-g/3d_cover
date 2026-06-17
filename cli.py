@@ -29,9 +29,10 @@ def main():
     parser.add_argument('--spine-spread', '-ss', type=int, default=0, help='书脊额外展开角度（度），默认：0')
     parser.add_argument('--camera-height', '-ch', type=float, default=0.5, help='相机高度比例（0-1），默认：0.5')
     parser.add_argument('--final-size', '-fs', type=int, default=1200, help='最终图像尺寸（像素），默认：1200')
-    parser.add_argument('--border', '-bd', type=float, default=0.1, help='边框占比（0-0.2），默认：0.1')
+    parser.add_argument('--border', '-bd', type=float, default=0.05, help='边框占比（0-0.2），默认：0.05')
     parser.add_argument('--book-type', '-bt', choices=['平装', '精装'], default='平装', help='书型，默认：平装')
     parser.add_argument('--shadow-mode', '-sm', choices=['无', '线性', '反射', '阴影'], default='线性', help='阴影模式，默认：线性')
+    parser.add_argument('--spine-width', '-sw', type=float, default=1.0, help='书脊拉伸比例（1.0-2.0），默认：1.0')
     parser.add_argument('--stroke-enabled', '-se', action='store_true', help='是否为封面描边，默认：False')
     parser.add_argument('--config', '-C', help='配置文件路径（JSON格式），配置文件中的参数会被命令行参数覆盖')
     
@@ -62,9 +63,9 @@ def main():
                 'stroke_enabled': 'stroke_enabled'
             }
             
-            # 应用配置文件中的参数（如果命令行没有提供的话）
+            # 应用配置文件中的参数（如果命令行没有提供，或命令行参数等于默认值）
             for cli_param, config_key in param_mapping.items():
-                if config_key in config_data and getattr(args, cli_param) is None or getattr(args, cli_param) == parser.get_default(cli_param):
+                if config_key in config_data and (getattr(args, cli_param) is None or getattr(args, cli_param) == parser.get_default(cli_param)):
                     # 对于布尔值参数，需要特殊处理
                     if cli_param == 'stroke_enabled':
                         setattr(args, cli_param, config_data[config_key])

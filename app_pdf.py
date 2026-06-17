@@ -88,8 +88,6 @@ def main():
     
     if uploaded_files:
         old_files = st.session_state.uploaded_files if st.session_state.uploaded_files else []
-        old_names = [f.name for f in old_files] if old_files else []
-        new_names = [f.name for f in uploaded_files]
         
         files_changed = (
             len(uploaded_files) != len(st.session_state.uploaded_files) or
@@ -211,7 +209,7 @@ def main():
                             
                             if cover_path and spine_path:
                                 st.subheader("界限预览")
-                                st.image(visualize_path, width='stretch')
+                                st.image(visualize_path, use_container_width=True)
                                 
                                 if is_first:
                                     all_cover_paths.append(cover_path)
@@ -262,11 +260,10 @@ def main():
                         border_percentage=render_params["border_percentage"],
                         book_type=render_params["book_type"],
                         shadow_mode=render_params["shadow_mode"],
-                        stroke_enabled=render_params["stroke_enabled"],
-                        is_2d=render_params["is_2d"]
+                        stroke_enabled=render_params["stroke_enabled"]
                     )
                     
-                    st.image(result_image, width='stretch')
+                    st.image(result_image, use_container_width=True)
                     
                     buf = io.BytesIO()
                     result_pil = Image.fromarray(result_image)

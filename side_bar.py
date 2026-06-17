@@ -31,8 +31,8 @@ def setup_render_params_sidebar(imported_config=None):
         
         book_type = st.radio(
             "选择书型",
-            options=["平装", "平装（2.5D）", "精装"],
-            index=["平装", "平装（2.5D）", "精装"].index(get_config_value(imported_config, "book_type", "平装")),
+            options=["平装", "精装"],
+            index=["平装", "精装"].index(get_config_value(imported_config, "book_type", "平装")),
         )
 
         cover_width = st.slider("开本宽度（mm）", 120, 200, get_config_value(imported_config, "cover_width", 187), 
@@ -76,8 +76,6 @@ def setup_render_params_sidebar(imported_config=None):
         )
         
         stroke_enabled = st.checkbox("封面描边", value=get_config_value(imported_config, "stroke_enabled", False), help="为封面和书脊添加细灰色边框，突出显示图书轮廓")
-        
-        is_2d = (book_type == "平装（2.5D）")
         
         with st.expander("高级设置", expanded=False):
             st.subheader("透视参数")
@@ -145,7 +143,6 @@ def setup_render_params_sidebar(imported_config=None):
         "spine_spread_angle": spine_spread_angle,
         "spine_width_ratio": spine_width_ratio,
         "stroke_enabled": stroke_enabled,
-        "is_2d": is_2d,
         "book_distance": book_distance,
         "camera_height_ratio": camera_height_ratio,
         "final_size": final_size,

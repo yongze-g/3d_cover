@@ -86,8 +86,7 @@ def process_images(ui_params: UIParams):
                 book_type=ui_params.book_type,
                 shadow_mode=ui_params.shadow_mode,
                 spine_width_ratio=ui_params.spine_width_ratio,
-                stroke_enabled=ui_params.stroke_enabled,
-                is_2d=ui_params.is_2d
+                stroke_enabled=ui_params.stroke_enabled
             )
             
             # 使用高级方法进行完整的3D封面渲染
@@ -101,13 +100,12 @@ def process_images(ui_params: UIParams):
                 border_percentage=render_params.border_percentage,
                 book_type=render_params.book_type,
                 shadow_mode=render_params.shadow_mode,
-                stroke_enabled=render_params.stroke_enabled,
-                is_2d=render_params.is_2d
+                stroke_enabled=render_params.stroke_enabled
             )
             
             # 显示结果
             with ui_params.result_placeholder:
-                st.image(result_image, width='stretch')
+                st.image(result_image, use_container_width=True)
         
             # 准备下载
             buf = io.BytesIO()

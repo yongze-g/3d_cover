@@ -13,12 +13,6 @@ class BookCoverRenderer:
         # 物理常量 - 像素密度（pixels per millimeter）
         self.display_ppmm = 96 / 25.4
 
-        # 2.5d模式标志
-        self._is_2d = False
-        # 2d最终呈现需要更大的高度
-        self._2d_cover_offset = 0.0
-        self._2d_spine_offset = 0.0
-
     def _hex_to_rgb(self, hex_color):
         """将十六进制颜色值转换为RGB格式"""
         hex_color = hex_color.lstrip('#')
@@ -53,13 +47,8 @@ class BookCoverRenderer:
         # 创建书脊透视变换
         spine_points = np.float32([[0, 0], [original_spine_w, 0], 
                         [original_spine_w, original_spine_h], [0, original_spine_h]])
-        if self._is_2d:
-            self._2d_spine_offset = spine_offset_y_bottom
-            spine_transformed = np.float32([[0, self._2d_cover_offset-spine_offset_y_bottom], [display_spine_width, self._2d_cover_offset], 
-                            [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
-        else:
-            spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
-                            [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
+        spine_transformed = np.float32([[0, spine_offset_y_top], [display_spine_width, 0], 
+                        [display_spine_width, spine_height], [0, spine_height - spine_offset_y_bottom]])
         spine_matrix = cv2.getPerspectiveTransform(spine_points, spine_transformed)
         
         # 变换书脊图像
@@ -113,12 +102,9 @@ class BookCoverRenderer:
             bottom_offset = np.sqrt((1 - normalized_x**2) * (spine_offset_y_bottom**2)) - spine_offset_y_bottom
             bottom_offset = bottom_offset.astype(int)
             
-        if self._is_2d:
-            top_offset = - bottom_offset - self._2d_cover_offset
-        else:
-            if spine_offset_y_top > 0:
-                top_offset = np.sqrt((1 - normalized_x**2) * (spine_offset_y_top**2)) - spine_offset_y_top
-                top_offset = top_offset.astype(int)
+        if spine_offset_y_top > 0:
+            top_offset = np.sqrt((1 - normalized_x**2) * (spine_offset_y_top**2)) - spine_offset_y_top
+            top_offset = top_offset.astype(int)
         
         # 创建y坐标数组 (0到h-1)
         y = np.arange(h)
@@ -132,14 +118,11 @@ class BookCoverRenderer:
             normalized_y = y / h
 
             # 计算每一行的偏移量（线性插值）
-            if self._is_2d:
-                offsets = - (current_bottom_offset + (1 - normalized_y) * self._2d_cover_offset).astype(int) 
-            else:
-                offsets = np.where(
-                    normalized_y < 0.5,
-                    current_top_offset * (1 - 2 * normalized_y),
-                    -current_bottom_offset * (2 * normalized_y - 1)
-                ).astype(int)
+            offsets = np.where(
+                normalized_y < 0.5,
+                current_top_offset * (1 - 2 * normalized_y),
+                -current_bottom_offset * (2 * normalized_y - 1)
+            ).astype(int)
         
             # 计算新的y坐标
             new_y = y + offsets
@@ -177,7 +160,7 @@ class BookCoverRenderer:
             total_display_spine_width: 变换后总书脊宽度（像素）
             spine_height: 变换后的书脊高度（像素）
 
-        TODO: 2.5D先按2D处理，后续再逐列偏离
+        TODO: 无
         """
 
         # 处理每个书脊图像
@@ -186,8 +169,6 @@ class BookCoverRenderer:
         display_spine_widths = []
 
         last_spine_height = cover_height
-
-        self._2d_spine_offset = 0.0
         
         for spine_img in spine_imgs:
             # 获取书脊图像尺寸
@@ -298,9 +279,9 @@ class BookCoverRenderer:
             # 创建结果图像
             result = original_image.copy()
             
-            # 叠加阴影（使用Alpha通道作为权重）
-            for c in range(3):  # 遍历BGR通道
-                result[:, :, c] = (1 - shadow_alpha) * original_image[:, :, c] + shadow_alpha * shadow_bgr[:, :, c]
+            # 叠加阴影（使用Alpha通道作为权重，向量化操作）
+            alpha_3d = shadow_alpha[:, :, np.newaxis]  # 扩展为3通道维度
+            result = (1 - alpha_3d) * original_image + alpha_3d * shadow_bgr
         else:
             # 如果没有Alpha通道，直接叠加（假设阴影已经处理好透明度）
             result = cv2.addWeighted(original_image, 1.0, resized_shadow, 0.5, 0)
@@ -509,14 +490,7 @@ class BookCoverRenderer:
         # 创建封面透视变换
         cover_points = np.float32([[0, 0], [original_cover_w, 0], 
                         [original_cover_w, original_cover_h], [0, original_cover_h]])
-        if self._is_2d:
-            self._2d_cover_offset = offset_y_bottom
-            print(f"self._2d_cover_offset set to: {self._2d_cover_offset}")
-            cover_transformed = np.float32([[0, self._2d_cover_offset], [display_cover_width, 0], 
-                        [display_cover_width, cover_height - self._2d_cover_offset], [0, cover_height]])
-        else:
-            # 3d模式下，封面放在顶部，书脊放在底部
-            cover_transformed = np.float32([[0, 0], [display_cover_width, offset_y_top], 
+        cover_transformed = np.float32([[0, 0], [display_cover_width, offset_y_top], 
                         [display_cover_width, cover_height - offset_y_bottom], [0, cover_height]])
         cover_matrix = cv2.getPerspectiveTransform(cover_points, cover_transformed)
         
@@ -546,7 +520,6 @@ class BookCoverRenderer:
         返回:
             渲染后的图像（RGB或RGBA格式的numpy数组）
         """
-        print("\n")
         # 转换图像格式
         cover, spine, spine_imgs_bgr = self._convert_images_to_bgr(cover_img, spine_img, hardcover_spines, book_type)
         
@@ -711,8 +684,7 @@ class BookCoverRenderer:
                        border_percentage,              # 边框占最终图像的比例
                        book_type,                      # 书型（平装/精装）
                        shadow_mode,                    # 阴影模式（无/线性/反射/阴影）
-                       stroke_enabled=False,           # 是否为封面描边
-                       is_2d=False):                   # 是否启用2.5d模式
+                       stroke_enabled=False):           # 是否为封面描边
         """
         完整的3D封面渲染流程
 
@@ -731,13 +703,10 @@ class BookCoverRenderer:
             book_type: 书型（平装/精装）
             shadow_mode: 阴影模式（无/线性/反射/阴影）
             stroke_enabled: 是否为封面描边
-            is_2d: 是否启用2.5d模式
 
         返回:
             result_image: 渲染后的3D封面图像
         """
-        self._is_2d = is_2d if book_type == "平装（2.5D）" else False
-        
         processed_cover_img = self._apply_shadow_to_cover(cover_img, shadow_mode)
         
         processed_spine_images = self._apply_shadow_to_spines(spine_images, shadow_mode)

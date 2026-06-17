@@ -46,8 +46,8 @@ def main():
     parser.add_argument('--spine-spread', '-ss', type=int, default=0, help='书脊额外展开角度（度），默认：0')
     parser.add_argument('--camera-height', '-ch', type=float, default=0.5, help='相机高度比例（0-1），默认：0.5')
     parser.add_argument('--final-size', '-fs', type=int, default=1200, help='最终图像尺寸（像素），默认：1200')
-    parser.add_argument('--border', '-bd', type=float, default=0.1, help='边框占比（0-0.2），默认：0.1')
-    parser.add_argument('--book-type', '-bt', choices=['paperback', 'paperback-2.5d', 'hardcover'], default='paperback', help='书型：paperback（平装）, paperback-2.5d（平装2.5D）, hardcover（精装）。默认：paperback')
+    parser.add_argument('--border', '-bd', type=float, default=0.05, help='边框占比（0-0.2），默认：0.05')
+    parser.add_argument('--book-type', '-bt', choices=['paperback', 'hardcover'], default='paperback', help='书型：paperback（平装）, hardcover（精装）。默认：paperback')
     parser.add_argument('--shadow-mode', '-sm', choices=['none', 'linear', 'reflection', 'shadow'], default='linear', help='阴影模式：none（无）, linear（线性）, reflection（反射）, shadow（阴影）。默认：linear')
     parser.add_argument('--stroke-enabled', '-se', action='store_true', help='是否为封面描边')
     
@@ -113,7 +113,6 @@ def main():
     # 命令行参数到内部参数的映射
     book_type_mapping = {
         'paperback': '平装',
-        'paperback-2.5d': '平装（2.5D）',
         'hardcover': '精装'
     }
     
@@ -165,9 +164,6 @@ def main():
         # 计算背景透明度（转换为0-255范围）
         bg_alpha = int(args.bg_alpha * 255 / 100)
         
-        # 确定是否启用2.5D模式
-        is_2d = (book_type_internal == "平装（2.5D）")
-        
         # 执行渲染
         result_image = renderer.render_3d_cover(
             cover_img=cover_img,
@@ -183,8 +179,7 @@ def main():
             border_percentage=args.border,
             book_type=book_type_internal,
             shadow_mode=shadow_mode_internal,
-            stroke_enabled=args.stroke_enabled,
-            is_2d=is_2d
+            stroke_enabled=args.stroke_enabled
         )
         
         # 保存结果

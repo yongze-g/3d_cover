@@ -165,8 +165,7 @@ def setup_ui():
         book_type=render_params["book_type"],
         shadow_mode=render_params["shadow_mode"],
         spine_width_ratio=render_params["spine_width_ratio"],
-        stroke_enabled=render_params["stroke_enabled"],
-        is_2d=render_params["is_2d"]
+        stroke_enabled=render_params["stroke_enabled"]
     )
 
 

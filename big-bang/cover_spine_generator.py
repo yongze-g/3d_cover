@@ -351,9 +351,8 @@ def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", 
                         # 计算距离的平均值和标准差，找出显著小的距离
                         avg_dist = sum(distances) / len(distances)
                         if len(distances) > 1:
-                            # 计算标准差
-                            variance = sum((d - avg_dist) ** 2 for d in distances) / len(distances)
-                            std_dev = variance ** 0.5
+                            # 计算距离平均值用于阈值判断
+                            avg_dist = sum(distances) / len(distances)
                             
                             # 找出显著小的距离（小于平均值的一半）
                             threshold = avg_dist / 2
@@ -488,9 +487,8 @@ def find_symmetry_positions(img_path, output_dir=".", directions=["horizontal", 
                         # 计算距离的平均值和标准差，找出显著小的距离
                         avg_dist = sum(distances) / len(distances)
                         if len(distances) > 1:
-                            # 计算标准差
-                            variance = sum((d - avg_dist) ** 2 for d in distances) / len(distances)
-                            std_dev = variance ** 0.5
+                            # 计算距离平均值用于阈值判断
+                            avg_dist = sum(distances) / len(distances)
                             
                             # 找出显著小的距离（小于平均值的一半）
                             threshold = avg_dist / 2
